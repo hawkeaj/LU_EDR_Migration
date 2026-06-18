@@ -22,6 +22,8 @@ Then browse to `http://127.0.0.1:4288/`.
 - Exports the enriched migration matrix as CSV or JSON, including the draft XQL and field map.
 - Stores working data in browser local storage.
 
+For the complete deterministic conversion logic, see [CONVERSION_APPENDIX.md](CONVERSION_APPENDIX.md).
+
 ## Import Fields
 
 CSV or JSON import works best with these fields:
