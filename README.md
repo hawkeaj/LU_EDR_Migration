@@ -15,6 +15,7 @@ Then browse to `http://127.0.0.1:4288/`.
 ## What It Does
 
 - Translates pasted SentinelOne STAR logic into draft Cortex XQL.
+- Validates STAR and hunt logic as S1QL with selectable Auto, 1.0, and 2.0 modes before conversion.
 - Maps common SentinelOne fields such as `EventType`, `TgtProcCmdLine`, `SrcProcName`, `RegistryKeyPath`, `DstIP`, and hash fields to Cortex-style fields.
 - Classifies each item as BIOC Rule, Correlation Rule, XQL Hunt, IOC Rule, or Exception Review.
 - Correlates rule context to MITRE ATT&CK tactics, techniques, and sub-techniques with confidence and rationale.
@@ -30,10 +31,12 @@ For the complete deterministic conversion logic, see [CONVERSION_APPENDIX.md](CO
 CSV or JSON import works best with these fields:
 
 ```text
-name,type,severity,scope,owner,status,logic
+name,type,s1qlVersion,severity,scope,owner,status,logic
 ```
 
 Accepted `type` values are `star`, `hunt`, `exclusion`, and `ioc`. The importer also normalizes common names such as `Deep Visibility`, `indicator`, `allow`, and `hash`.
+
+Accepted `s1qlVersion` values are `auto`, `1.0`, and `2.0`. If omitted, the validator uses auto-detection and treats rules without S1QL 2.0-only operators as 1.0-compatible.
 
 For JSON exports, the importer looks for arrays named `rules`, `items`, `data`, `results`, or `detections`, then attempts to extract query text from fields such as `query`, `queryText`, `filter`, `expression`, `logic`, `ruleQuery`, and `dvQuery`.
 

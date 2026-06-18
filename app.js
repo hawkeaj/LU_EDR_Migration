@@ -402,6 +402,32 @@ const mitreRules = [
   }
 ];
 
+const s1qlOperatorSupport = {
+  "1.0": new Set(["=", "!=", ">", "<", ">=", "<=", "contains", "not contains", "in", "not in", "matches", "regexp", "is empty", "is not empty"]),
+  "2.0": new Set(["=", "!=", ">", "<", ">=", "<=", "contains", "not contains", "in", "not in", "matches", "regexp", "starts with", "ends with", "is empty", "is not empty"])
+};
+
+const s1qlTwoOnlyOperators = new Set(["starts with", "ends with"]);
+
+const s1qlKnownFieldNames = new Set([
+  ...Object.keys(fieldMappings),
+  "eventtype",
+  "tgtprocname",
+  "tgtproccmdline",
+  "tgtprocpath",
+  "srcprocname",
+  "srcproccmdline",
+  "registrykeypath",
+  "dstip",
+  "dstport",
+  "username",
+  "endpointname",
+  "hostname",
+  "sha256",
+  "sha1",
+  "md5"
+]);
+
 const demoItems = [
   {
     id: makeId(),
@@ -470,6 +496,7 @@ let items = loadItems();
 const form = document.querySelector("#item-form");
 const fields = {
   type: document.querySelector("#source-type"),
+  s1qlVersion: document.querySelector("#s1ql-version"),
   severity: document.querySelector("#severity"),
   scope: document.querySelector("#scope"),
   owner: document.querySelector("#owner"),
@@ -493,6 +520,7 @@ const biocPreview = document.querySelector("#bioc-preview");
 const mappingPreview = document.querySelector("#mapping-preview");
 const issuesPreview = document.querySelector("#issues-preview");
 const mitrePreview = document.querySelector("#mitre-preview");
+const s1qlPreview = document.querySelector("#s1ql-preview");
 const copyXqlButton = document.querySelector("#copy-xql");
 const exportTranslationButton = document.querySelector("#export-translation");
 
@@ -579,7 +607,8 @@ function analyzeItem(item) {
     ];
   }
 
-  const translation = translateToCortex(item, { target, confidence, risk, responseAction }, extracted);
+  const s1ql = validateS1ql(item, extracted);
+  const translation = translateToCortex(item, { target, confidence, risk, responseAction }, extracted, s1ql);
   const downgradedConfidence = lowerConfidence(confidence, translation);
   const mitre = correlateMitre(item, translation, { target, risk });
 
@@ -590,6 +619,7 @@ function analyzeItem(item) {
     risk,
     recommendedWork,
     nextChecks,
+    s1ql,
     translation,
     mitre
   };
@@ -607,6 +637,294 @@ function lowerConfidence(confidence, translation) {
   if (highIssues || lowMappings >= 2) return "Low";
   if (confidence === "High" && (translation.issues.length || lowMappings)) return "Medium";
   return confidence;
+}
+
+function validateS1ql(item, extracted) {
+  if (item.type === "exclusion") {
+    return {
+      requestedVersion: item.s1qlVersion || "auto",
+      detectedVersion: "n/a",
+      status: "Not applicable",
+      summary: "Exclusion review items are not validated as S1QL detection logic.",
+      findings: []
+    };
+  }
+
+  if (item.type === "ioc") {
+    return {
+      requestedVersion: item.s1qlVersion || "auto",
+      detectedVersion: "n/a",
+      status: "Not applicable",
+      summary: "IOC items are validated through indicator extraction instead of S1QL syntax.",
+      findings: []
+    };
+  }
+
+  const requestedVersion = item.s1qlVersion || "auto";
+  const query = normalizeRuleSpacing(extracted.query);
+  const findings = [];
+
+  if (!query) {
+    findings.push(s1qlFinding("Error", "Empty rule logic", "Paste a STAR or Deep Visibility S1QL expression before converting."));
+  }
+
+  checkS1qlDelimiters(query, findings);
+  checkS1qlBooleanPlacement(query, findings);
+  checkS1qlConditionSyntax(query, findings);
+  checkS1qlUnsupportedSyntax(query, findings);
+
+  const detectedVersion = detectS1qlVersion(query, requestedVersion, findings);
+  checkS1qlVersionSupport(query, requestedVersion, detectedVersion, findings);
+
+  const status = findings.some((finding) => finding.level === "Error")
+    ? "Invalid"
+    : findings.some((finding) => finding.level === "Warning")
+      ? "Valid with warnings"
+      : "Valid";
+
+  return {
+    requestedVersion,
+    detectedVersion,
+    status,
+    summary: summarizeS1qlStatus(status, requestedVersion, detectedVersion),
+    findings: findings.length ? findings : [s1qlFinding("Ok", "S1QL syntax checks passed", "No local S1QL syntax errors were detected.")]
+  };
+}
+
+function s1qlFinding(level, title, detail) {
+  return { level, title, detail };
+}
+
+function checkS1qlDelimiters(query, findings) {
+  const stack = [];
+  let quoteChar = "";
+  let escaped = false;
+
+  for (let index = 0; index < query.length; index += 1) {
+    const char = query[index];
+
+    if (quoteChar) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quoteChar) {
+        quoteChar = "";
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quoteChar = char;
+    } else if (char === "(") {
+      stack.push({ char, index });
+    } else if (char === ")") {
+      if (!stack.length) {
+        findings.push(s1qlFinding("Error", "Unmatched closing parenthesis", `Unexpected ")" near character ${index + 1}.`));
+      } else {
+        stack.pop();
+      }
+    }
+  }
+
+  if (quoteChar) {
+    findings.push(s1qlFinding("Error", "Unclosed string literal", `Missing closing ${quoteChar} quote.`));
+  }
+
+  stack.forEach((entry) => {
+    findings.push(s1qlFinding("Error", "Unclosed parenthesis", `Missing closing ")" for "(" near character ${entry.index + 1}.`));
+  });
+}
+
+function checkS1qlBooleanPlacement(query, findings) {
+  const bare = stripS1qlStrings(query).trim();
+  if (!bare) return;
+
+  if (/^(AND|OR)\b/i.test(bare)) {
+    findings.push(s1qlFinding("Error", "Leading boolean operator", "S1QL expressions should not start with AND or OR."));
+  }
+
+  if (/\b(AND|OR|NOT)\s*$/i.test(bare)) {
+    findings.push(s1qlFinding("Error", "Trailing boolean operator", "S1QL expressions should not end with AND, OR, or NOT."));
+  }
+
+  if (/\b(AND|OR)\s+(AND|OR)\b/i.test(bare)) {
+    findings.push(s1qlFinding("Error", "Consecutive boolean operators", "Remove duplicate AND/OR operators or add the missing condition."));
+  }
+
+  if (/\bNOT\s+(AND|OR)\b/i.test(bare)) {
+    findings.push(s1qlFinding("Error", "Invalid NOT placement", "NOT should precede a condition or parenthesized expression."));
+  }
+
+  if (/\b(and|or|not)\b/.test(query) && !/\b(AND|OR|NOT)\b/.test(query)) {
+    findings.push(s1qlFinding("Info", "Lowercase boolean operators", "The converter accepts lowercase booleans, but exported STAR rules commonly use uppercase AND/OR/NOT."));
+  }
+}
+
+function checkS1qlConditionSyntax(query, findings) {
+  const conditions = extractS1qlConditions(query);
+  const withoutStrings = stripS1qlStrings(query);
+
+  if (!conditions.length && /[A-Za-z][A-Za-z0-9_]*\s*(=|!=|>|<|\bcontains\b|\bin\b|\bmatches\b)/i.test(withoutStrings)) {
+    findings.push(s1qlFinding("Error", "Could not parse condition", "The rule appears to contain a condition, but the field/operator/value shape is malformed."));
+  }
+
+  conditions.forEach((condition) => {
+    const key = condition.field.toLowerCase();
+    const operator = condition.operator.toLowerCase();
+    const value = condition.value.trim();
+
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(condition.field)) {
+      findings.push(s1qlFinding("Error", "Invalid field name", `${condition.field} should start with a letter and contain only letters, numbers, and underscores.`));
+    }
+
+    if (!s1qlKnownFieldNames.has(key) && !fieldMappings[key]) {
+      findings.push(s1qlFinding("Info", "Unmapped S1QL field", `${condition.field} is syntactically usable, but this utility does not have a Cortex field mapping for it yet.`));
+    }
+
+    if ((operator === "in" || operator === "not in") && !(value.startsWith("(") && value.endsWith(")"))) {
+      findings.push(s1qlFinding("Error", "Malformed IN list", `${condition.field} ${condition.operator} should be followed by a parenthesized list.`));
+    }
+
+    if ((operator === "in" || operator === "not in") && value.startsWith("(")) {
+      const listItems = parseListItems(value);
+      if (!listItems.length) {
+        findings.push(s1qlFinding("Error", "Empty IN list", `${condition.field} ${condition.operator} has no values.`));
+      }
+      if (/,\s*\)/.test(value)) {
+        findings.push(s1qlFinding("Warning", "Trailing comma in list", `${condition.field} ${condition.operator} has a trailing comma that may not be accepted by S1QL.`));
+      }
+    }
+
+    if ((operator === "contains" || operator === "not contains" || operator === "matches" || operator === "regexp" || operator === "starts with" || operator === "ends with") && !value) {
+      findings.push(s1qlFinding("Error", "Missing comparison value", `${condition.field} ${condition.operator} needs a value.`));
+    }
+
+    if ((operator === "is empty" || operator === "is not empty") && value) {
+      findings.push(s1qlFinding("Warning", "Unexpected value after empty check", `${condition.field} ${condition.operator} should not be followed by an additional value.`));
+    }
+  });
+
+  checkS1qlOrphanedFields(query, conditions, findings);
+}
+
+function checkS1qlUnsupportedSyntax(query, findings) {
+  const stripped = stripS1qlStrings(query);
+
+  if (/[;{}]/.test(stripped)) {
+    findings.push(s1qlFinding("Warning", "Unexpected punctuation", "Semicolons or braces are not expected in simple STAR S1QL filter expressions."));
+  }
+
+  if (/\bSELECT\b|\bFROM\b|\bWHERE\b|\bGROUP\s+BY\b|\bORDER\s+BY\b|\bLIMIT\b/i.test(stripped)) {
+    findings.push(s1qlFinding("Warning", "SQL-like syntax detected", "STAR S1QL filters are expected to be boolean expressions, not full SQL statements."));
+  }
+
+  if (/\b(?:and|or|not)\b/.test(stripped) && /\b(?:AND|OR|NOT)\b/.test(stripped)) {
+    findings.push(s1qlFinding("Info", "Mixed boolean casing", "Normalize boolean operator casing before final import to reduce parser ambiguity."));
+  }
+}
+
+function detectS1qlVersion(query, requestedVersion, findings) {
+  const stripped = stripS1qlStrings(query);
+  const usesTwoOnly = /\bstarts\s+with\b|\bends\s+with\b/i.test(stripped);
+
+  if (requestedVersion === "1.0" && usesTwoOnly) return "2.0";
+  if (requestedVersion === "2.0") return "2.0";
+  if (requestedVersion === "1.0") return "1.0";
+  if (usesTwoOnly) return "2.0";
+
+  findings.push(s1qlFinding("Info", "S1QL version not explicit", "No version-specific operator was detected; the rule is treated as S1QL 1.0-compatible."));
+  return "1.0-compatible";
+}
+
+function checkS1qlVersionSupport(query, requestedVersion, detectedVersion, findings) {
+  const conditions = extractS1qlConditions(query);
+  const supportedVersion = requestedVersion === "auto" ? (detectedVersion === "2.0" ? "2.0" : "1.0") : requestedVersion;
+  const supported = s1qlOperatorSupport[supportedVersion] || s1qlOperatorSupport["1.0"];
+
+  conditions.forEach((condition) => {
+    const operator = condition.operator.toLowerCase();
+    if (!supported.has(operator)) {
+      findings.push(s1qlFinding("Error", "Operator not supported for selected S1QL version", `${condition.operator} is not enabled for S1QL ${supportedVersion} in this validator.`));
+    }
+    if (requestedVersion === "1.0" && s1qlTwoOnlyOperators.has(operator)) {
+      findings.push(s1qlFinding("Error", "S1QL 2.0 operator in S1QL 1.0 rule", `${condition.operator} requires S1QL 2.0 mode.`));
+    }
+  });
+}
+
+function summarizeS1qlStatus(status, requestedVersion, detectedVersion) {
+  if (status === "Invalid") return `Blocking S1QL issues found for ${requestedVersion === "auto" ? detectedVersion : `S1QL ${requestedVersion}`}.`;
+  if (status === "Valid with warnings") return `S1QL checks passed with review notes for ${requestedVersion === "auto" ? detectedVersion : `S1QL ${requestedVersion}`}.`;
+  return `S1QL checks passed for ${requestedVersion === "auto" ? detectedVersion : `S1QL ${requestedVersion}`}.`;
+}
+
+function extractS1qlConditions(query) {
+  const conditions = [];
+  const operatorPattern = /(is\s+not\s+empty|is\s+empty|not\s+contains|starts\s+with|ends\s+with|not\s+in|contains|matches|regexp|in|!=|>=|<=|=|>|<)/i;
+  const valuePattern = /(?!(?:AND|OR|NOT)\b)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^()"']+|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')*\)|[^\s)]+)/;
+  const conditionPattern = new RegExp(`\\b([A-Za-z][A-Za-z0-9_]*)\\b\\s+${operatorPattern.source}(?:\\s+${valuePattern.source})?`, "gi");
+  let match;
+
+  while ((match = conditionPattern.exec(query))) {
+    conditions.push({
+      field: match[1],
+      operator: match[2].replace(/\s+/g, " "),
+      value: match[3] || "",
+      start: match.index,
+      end: conditionPattern.lastIndex
+    });
+  }
+
+  return conditions;
+}
+
+function checkS1qlOrphanedFields(query, conditions, findings) {
+  const covered = new Array(query.length).fill(false);
+  conditions.forEach((condition) => {
+    for (let index = condition.start; index < condition.end; index += 1) covered[index] = true;
+  });
+
+  const stripped = stripS1qlStrings(query);
+  const fieldPattern = /\b([A-Z][A-Za-z0-9_]{2,})\b/g;
+  let match;
+
+  while ((match = fieldPattern.exec(stripped))) {
+    const token = match[1];
+    const upper = token.toUpperCase();
+    if (["AND", "OR", "NOT", "TRUE", "FALSE", "NULL"].includes(upper)) continue;
+    if (covered[match.index]) continue;
+    const after = stripped.slice(match.index + token.length, match.index + token.length + 18);
+    if (/^\s*(AND|OR|\)|$)/i.test(after)) {
+      findings.push(s1qlFinding("Warning", "Field without operator", `${token} appears without a comparison operator.`));
+    }
+  }
+}
+
+function stripS1qlStrings(query) {
+  let output = "";
+  let quoteChar = "";
+  let escaped = false;
+
+  for (const char of String(query || "")) {
+    if (quoteChar) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quoteChar) {
+        quoteChar = "";
+      }
+      output += " ";
+    } else if (char === '"' || char === "'") {
+      quoteChar = char;
+      output += " ";
+    } else {
+      output += char;
+    }
+  }
+
+  return output;
 }
 
 function correlateMitre(item, translation, classification) {
@@ -776,7 +1094,7 @@ function looksLikeRuleLogic(value) {
   return /\b(EventType|TgtProc|SrcProc|CmdLine|Registry|DstIP|SHA256|contains|AND|OR|in\s*\()/i.test(value);
 }
 
-function translateToCortex(item, classification, extracted) {
+function translateToCortex(item, classification, extracted, s1ql) {
   if (item.type === "exclusion") return translateException(item, classification);
   if (item.type === "ioc") return translateIoc(item, classification);
 
@@ -791,6 +1109,18 @@ function translateToCortex(item, classification, extracted) {
     issues.push({
       level: "Info",
       text: `Parsed STAR logic from ${extracted.extractedFrom}. Review other exported metadata manually.`
+    });
+  }
+
+  if (s1ql?.status === "Invalid") {
+    issues.push({
+      level: "High",
+      text: "S1QL validation found blocking syntax errors. Fix the source rule before trusting the Cortex translation."
+    });
+  } else if (s1ql?.findings.some((finding) => finding.level === "Warning")) {
+    issues.push({
+      level: "Medium",
+      text: "S1QL validation found warnings. Review version assumptions and operator support before production migration."
     });
   }
 
@@ -1280,6 +1610,7 @@ function currentDraftItem() {
   return {
     id: "draft",
     type: fields.type.value,
+    s1qlVersion: fields.s1qlVersion.value,
     name: fields.name.value.trim() || "Draft SentinelOne item",
     severity: fields.severity.value,
     scope: fields.scope.value.trim() || "Unscoped",
@@ -1322,9 +1653,10 @@ function renderTranslationPreview() {
     <span class="mini-stat"><small>Target</small><strong>${escapeHtml(draft.target)}</strong></span>
     <span class="mini-stat"><small>Confidence</small><strong class="${confidenceClass(draft.confidence)}">${escapeHtml(draft.confidence)}</strong></span>
     <span class="mini-stat"><small>Risk</small><strong class="${riskClass(draft.risk)}">${escapeHtml(draft.risk)}</strong></span>
-    <span class="mini-stat"><small>Complexity</small><strong>${escapeHtml(draft.translation.complexity)}</strong></span>
+    <span class="mini-stat"><small>S1QL</small><strong>${escapeHtml(draft.s1ql.status)}</strong></span>
   `;
 
+  s1qlPreview.innerHTML = s1qlHtml(draft.s1ql);
   biocPreview.innerHTML = listHtml(draft.translation.biocConditions);
 
   mappingPreview.innerHTML = draft.translation.fieldMap.length
@@ -1358,7 +1690,7 @@ function renderMatrix() {
     <tr>
       <td><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)} / ${escapeHtml(item.owner)}</small></td>
       <td><span class="pill">${sourceLabel(item.type)}</span><small>${escapeHtml(item.severity)}</small></td>
-      <td>${escapeHtml(item.target)}<small>${escapeHtml(item.translation.complexity)} complexity</small><small>${escapeHtml(primaryMitreLabel(item.mitre))}</small></td>
+      <td>${escapeHtml(item.target)}<small>${escapeHtml(item.translation.complexity)} complexity</small><small>S1QL: ${escapeHtml(item.s1ql.status)}</small><small>${escapeHtml(primaryMitreLabel(item.mitre))}</small></td>
       <td><span class="${riskClass(item.risk)}">${escapeHtml(item.risk)}</span></td>
       <td><span class="${confidenceClass(item.confidence)}">${escapeHtml(item.confidence)}</span></td>
       <td>
@@ -1393,6 +1725,7 @@ function showDetails(id) {
       <p><strong>Risk:</strong> ${escapeHtml(item.risk)}</p>
       <p><strong>Confidence:</strong> ${escapeHtml(item.confidence)}</p>
       <p><strong>Complexity:</strong> ${escapeHtml(item.translation.complexity)}</p>
+      <p><strong>S1QL:</strong> ${escapeHtml(item.s1ql.status)} (${escapeHtml(item.s1ql.detectedVersion)})</p>
       <p>${escapeHtml(item.recommendedWork)}</p>
     </article>
     <article class="detail-box">
@@ -1402,6 +1735,10 @@ function showDetails(id) {
     <article class="detail-box wide">
       <h3>Draft Cortex XQL</h3>
       <pre>${escapeHtml(item.translation.xql)}</pre>
+    </article>
+    <article class="detail-box wide">
+      <h3>S1QL Validation</h3>
+      <div class="validation-list">${s1qlHtml(item.s1ql)}</div>
     </article>
     <article class="detail-box">
       <h3>BIOC or Rule Builder Notes</h3>
@@ -1455,6 +1792,7 @@ function addItem(event) {
   items.unshift({
     id: makeId(),
     type: fields.type.value,
+    s1qlVersion: fields.s1qlVersion.value,
     name: fields.name.value.trim() || "Untitled SentinelOne item",
     severity: fields.severity.value,
     scope: fields.scope.value.trim() || "Unscoped",
@@ -1505,6 +1843,7 @@ function normalizeImported(data) {
   return rows.map((item) => ({
     id: item.id || makeId(),
     type: normalizeType(readAny(item, ["type", "source", "ruleType", "kind", "category"]) || "star"),
+    s1qlVersion: normalizeS1qlVersion(readAny(item, ["s1qlVersion", "s1ql", "queryLanguageVersion", "languageVersion"]) || "auto"),
     name: String(readAny(item, ["name", "ruleName", "title", "displayName"]) || "Imported item"),
     severity: normalizeSeverity(readAny(item, ["severity", "level", "riskLevel"]) || "Medium"),
     scope: String(readAny(item, ["scope", "site", "group", "agentGroup", "tenant"]) || "Imported"),
@@ -1563,6 +1902,13 @@ function normalizeSeverity(value) {
   return "Medium";
 }
 
+function normalizeS1qlVersion(value) {
+  const text = String(value || "").toLowerCase();
+  if (text.includes("2")) return "2.0";
+  if (text.includes("1")) return "1.0";
+  return "auto";
+}
+
 function normalizeStatus(value) {
   const text = String(value || "").toLowerCase();
   if (text.includes("ready")) return "Ready for pilot";
@@ -1602,6 +1948,10 @@ function exportCsv() {
   const headers = [
     "name",
     "type",
+    "s1qlVersion",
+    "s1qlDetectedVersion",
+    "s1qlStatus",
+    "s1qlFindings",
     "severity",
     "scope",
     "owner",
@@ -1625,6 +1975,10 @@ function exportCsv() {
   const rows = analyzedItems().map((item) => [
     item.name,
     item.type,
+    item.s1qlVersion || "auto",
+    item.s1ql.detectedVersion,
+    item.s1ql.status,
+    item.s1ql.findings.map((finding) => `${finding.level}: ${finding.title} - ${finding.detail}`).join(" | "),
     item.severity,
     item.scope,
     item.owner,
@@ -1712,6 +2066,31 @@ function confidenceClass(confidence) {
 
 function listHtml(itemsToRender) {
   return itemsToRender.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+}
+
+function s1qlHtml(s1ql) {
+  const classes = {
+    Error: "validation-error",
+    Warning: "validation-warning",
+    Info: "validation-info",
+    Ok: "validation-ok"
+  };
+
+  const header = `
+    <article class="validation-item ${s1ql.status === "Invalid" ? "validation-error" : s1ql.status === "Valid with warnings" ? "validation-warning" : "validation-ok"}">
+      <strong>${escapeHtml(s1ql.status)}</strong>
+      <small>${escapeHtml(s1ql.summary)}</small>
+    </article>
+  `;
+
+  const findings = s1ql.findings.map((finding) => `
+    <article class="validation-item ${classes[finding.level] || "validation-info"}">
+      <strong>${escapeHtml(finding.level)}: ${escapeHtml(finding.title)}</strong>
+      <p>${escapeHtml(finding.detail)}</p>
+    </article>
+  `).join("");
+
+  return header + findings;
 }
 
 function mitreHtml(mitre) {

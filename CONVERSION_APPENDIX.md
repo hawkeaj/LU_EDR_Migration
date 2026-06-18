@@ -17,14 +17,15 @@ Each imported or pasted item passes through the same high-level pipeline:
    - `status`
    - `logic`
 2. Extract rule logic from raw text or JSON.
-3. Classify the source item into a Cortex destination.
-4. Translate fields, event types, operators, and values.
-5. Generate draft Cortex XQL.
-6. Generate BIOC or rule-builder notes.
-7. Generate field-mapping metadata.
-8. Generate manual-review flags.
-9. Assign risk, confidence, and complexity.
-10. Render and export the enriched migration matrix.
+3. Validate STAR and hunt logic as S1QL.
+4. Classify the source item into a Cortex destination.
+5. Translate fields, event types, operators, and values.
+6. Generate draft Cortex XQL.
+7. Generate BIOC or rule-builder notes.
+8. Generate field-mapping metadata.
+9. Generate manual-review flags.
+10. Assign risk, confidence, and complexity.
+11. Render and export the enriched migration matrix.
 
 ## 2. Supported Source Types
 
@@ -40,7 +41,7 @@ Each imported or pasted item passes through the same high-level pipeline:
 CSV import works best with:
 
 ```text
-name,type,severity,scope,owner,status,logic
+name,type,s1qlVersion,severity,scope,owner,status,logic
 ```
 
 JSON import accepts either a single object or arrays under these keys:
@@ -62,6 +63,14 @@ query, queryText, filter, expression, logic, ruleQuery, dvQuery, description
 ```
 
 If no structured query field is found, the whole object is stringified so the analyst can still review it.
+
+`s1qlVersion` accepts:
+
+```text
+auto, 1.0, 2.0
+```
+
+If omitted, the validator uses `auto`.
 
 ## 4. Type Normalization
 
@@ -90,7 +99,102 @@ If no structured query field is found, the whole object is stringified so the an
 | `backlog` | `Backlog` |
 | Anything else | `Needs validation` |
 
-## 7. Cortex Destination Classification
+## 7. S1QL Validation
+
+STAR rules and Deep Visibility hunts are validated as S1QL before Cortex translation. IOC and exclusion items are marked `Not applicable` because they do not represent S1QL detection logic in this utility.
+
+### S1QL Version Modes
+
+| Mode | Behavior |
+|---|---|
+| `auto` | Detects S1QL 2.0-only operators when present; otherwise treats the rule as S1QL 1.0-compatible |
+| `1.0` | Validates against the S1QL 1.0 operator set configured in the utility |
+| `2.0` | Validates against the S1QL 2.0 operator set configured in the utility |
+
+### Operator Support
+
+| Operator | S1QL 1.0 | S1QL 2.0 |
+|---|---:|---:|
+| `=` | Yes | Yes |
+| `!=` | Yes | Yes |
+| `>` | Yes | Yes |
+| `<` | Yes | Yes |
+| `>=` | Yes | Yes |
+| `<=` | Yes | Yes |
+| `contains` | Yes | Yes |
+| `not contains` | Yes | Yes |
+| `in` | Yes | Yes |
+| `not in` | Yes | Yes |
+| `matches` | Yes | Yes |
+| `regexp` | Yes | Yes |
+| `is empty` | Yes | Yes |
+| `is not empty` | Yes | Yes |
+| `starts with` | No | Yes |
+| `ends with` | No | Yes |
+
+### Blocking Errors
+
+The validator marks a rule `Invalid` when it detects:
+
+- Empty rule logic.
+- Unclosed string literals.
+- Unmatched opening or closing parentheses.
+- Leading `AND` or `OR`.
+- Trailing `AND`, `OR`, or `NOT`.
+- Consecutive `AND` or `OR` operators.
+- Invalid `NOT` placement.
+- Malformed field/operator/value shape.
+- Invalid field names.
+- `in` or `not in` without a parenthesized list.
+- Empty `in` or `not in` lists.
+- Operators unsupported by the selected S1QL version.
+- S1QL 2.0-only operators while S1QL 1.0 mode is selected.
+
+### Warnings
+
+The validator marks a rule `Valid with warnings` when it detects:
+
+- Trailing comma inside an `in` list.
+- Unexpected value after `is empty` or `is not empty`.
+- Semicolons or braces in a simple S1QL filter.
+- SQL-like syntax such as `SELECT`, `FROM`, `WHERE`, `GROUP BY`, `ORDER BY`, or `LIMIT`.
+- Field-like tokens without comparison operators.
+
+### Informational Findings
+
+The validator also records non-blocking notes for:
+
+- Auto-detected version assumptions.
+- Lowercase boolean operators.
+- Mixed boolean operator casing.
+- Syntactically usable fields that do not yet have a Cortex mapping in this utility.
+
+### S1QL Validation Output
+
+Each analyzed item includes:
+
+```text
+s1ql.requestedVersion,
+s1ql.detectedVersion,
+s1ql.status,
+s1ql.summary,
+s1ql.findings
+```
+
+Validation status values:
+
+| Status | Meaning |
+|---|---|
+| `Valid` | No local S1QL errors or warnings were found |
+| `Valid with warnings` | The rule is parseable but has migration or compatibility warnings |
+| `Invalid` | Blocking syntax or version errors were found |
+| `Not applicable` | Item is an IOC or exclusion rather than S1QL detection logic |
+
+### Limit of the Validator
+
+The validator is a local compatibility and migration guardrail. It is not a full SentinelOne parser, does not call SentinelOne APIs, and cannot guarantee tenant-specific STAR import acceptance.
+
+## 8. Cortex Destination Classification
 
 Classification is heuristic and based on source type plus text found in the name and logic.
 
@@ -193,7 +297,7 @@ Convert to XQL, run against 30-90 days of Cortex telemetry, then decide whether
 it should alert.
 ```
 
-## 8. Risk Assignment
+## 9. Risk Assignment
 
 Base severity risk:
 
@@ -220,7 +324,7 @@ Risk is increased to `High` when:
 
 IOC items are assigned `Low` migration risk because the transformation itself is usually straightforward. Operational risk still depends on source quality and alert routing.
 
-## 9. Confidence Assignment
+## 10. Confidence Assignment
 
 Initial confidence:
 
@@ -239,7 +343,7 @@ Confidence is lowered when:
 - Two or more low-confidence field mappings exist.
 - A nominally high-confidence conversion has unmapped fields or review warnings.
 
-## 10. Complexity Assignment
+## 11. Complexity Assignment
 
 Complexity is based on boolean count, condition count, and manual-review flags.
 
@@ -259,7 +363,7 @@ Boolean operators counted:
 AND, OR, NOT
 ```
 
-## 11. Field Mapping Dictionary
+## 12. Field Mapping Dictionary
 
 The utility maps known SentinelOne fields to Cortex-style fields. Unknown fields are preserved as-is and marked `Low` confidence.
 
@@ -299,7 +403,7 @@ The utility maps known SentinelOne fields to Cortex-style fields. Unknown fields
 | `SiteName` | `agent_installation_package` | Low | S1 site scoping usually maps better to tenant/group/tag controls |
 | `OS` | `agent_os_type` | High | Endpoint operating system |
 
-## 12. Event Type Mapping
+## 13. Event Type Mapping
 
 | SentinelOne EventType value | Cortex value |
 |---|---|
@@ -320,7 +424,7 @@ The utility maps known SentinelOne fields to Cortex-style fields. Unknown fields
 
 Unknown event types are preserved as `event_type <operator> <value>` and flagged for manual review.
 
-## 13. Operator Conversion
+## 14. Operator Conversion
 
 | SentinelOne-style operator | Cortex draft output | Notes |
 |---|---|---|
@@ -349,7 +453,7 @@ Boolean operators are normalized:
 | `OR` | `or` |
 | `NOT` | `not` |
 
-## 14. Value Normalization
+## 15. Value Normalization
 
 The converter normalizes values as follows:
 
@@ -361,7 +465,7 @@ The converter normalizes values as follows:
 - Parenthesized lists are parsed into quoted, comma-separated lists.
 - Backslashes and quotation marks inside strings are escaped.
 
-## 15. Draft XQL Template
+## 16. Draft XQL Template
 
 For STAR and hunt items, generated XQL uses this template:
 
@@ -394,7 +498,7 @@ event_type
 
 Fields explicitly referenced by the source rule are also added to the output field list.
 
-## 16. BIOC or Rule-Builder Notes
+## 17. BIOC or Rule-Builder Notes
 
 For every extracted condition, the utility generates a human-readable note:
 
@@ -418,7 +522,7 @@ No simple BIOC conditions were extracted. Build this as scheduled XQL or a corre
 No simple BIOC conditions were extracted. Confirm the STAR export includes structured rule logic.
 ```
 
-## 17. Manual Review Flags
+## 18. Manual Review Flags
 
 The utility adds manual-review flags for logic that should not be blindly converted.
 
@@ -445,7 +549,7 @@ The utility adds manual-review flags for logic that should not be blindly conver
 | `?` | Info | Wildcard syntax may need conversion |
 | `automated response:` | High | Rebuild in Cortex playbooks or alert actions after pilot |
 
-## 18. Automated Response Handling
+## 19. Automated Response Handling
 
 SentinelOne automated response text is intentionally removed from generated XQL and converted into a high-risk manual-review flag.
 
@@ -461,7 +565,7 @@ Response signals:
 quarantine, kill, isolate, remediate, rollback, response, terminate, disable network
 ```
 
-## 19. IOC Extraction
+## 20. IOC Extraction
 
 IOC items use a dedicated extraction path.
 
@@ -500,7 +604,7 @@ No normalized indicator value was detected. Import may need explicit hash, IP,
 domain, or URL columns.
 ```
 
-## 20. Exclusion Conversion
+## 21. Exclusion Conversion
 
 Exclusions are not converted directly into Cortex allow rules.
 
@@ -542,13 +646,17 @@ Replace broad path rules with signer/hash/path/process scoped controls where pos
 Add owner, justification, expiration, and pilot endpoints before production rollout.
 ```
 
-## 21. Exported Matrix Fields
+## 22. Exported Matrix Fields
 
 CSV export includes:
 
 ```text
 name,
 type,
+s1qlVersion,
+s1qlDetectedVersion,
+s1qlStatus,
+s1qlFindings,
 severity,
 scope,
 owner,
@@ -578,6 +686,11 @@ confidence,
 risk,
 recommendedWork,
 nextChecks,
+s1ql.requestedVersion,
+s1ql.detectedVersion,
+s1ql.status,
+s1ql.summary,
+s1ql.findings,
 translation.sourceFormat,
 translation.extractedFrom,
 translation.normalizedStar,
@@ -593,7 +706,7 @@ mitre.matches,
 mitre.notes
 ```
 
-## 22. MITRE ATT&CK Correlation
+## 23. MITRE ATT&CK Correlation
 
 MITRE ATT&CK correlation is deterministic and context-based. The utility does not call MITRE APIs at runtime and does not infer adversary intent beyond observable rule context.
 
@@ -617,7 +730,6 @@ Correlation inputs:
 rule name,
 original SentinelOne logic,
 normalized STAR logic,
-generated Cortex XQL,
 Cortex target classification
 ```
 
@@ -670,7 +782,7 @@ The utility adds explanatory notes when:
 - The item is IOC-only and may not represent a precise behavior without surrounding context.
 - The item is an exclusion and should be reviewed as a control gap or compensating-control decision.
 
-## 23. Known Limitations
+## 24. Known Limitations
 
 The utility does not yet:
 
@@ -687,7 +799,7 @@ The utility does not yet:
 - Guarantee ATT&CK mapping for every possible detection objective.
 - Distinguish threat behavior from generic administrative tooling without analyst context.
 
-## 24. Required Human Validation
+## 25. Required Human Validation
 
 Before production enablement, validate:
 

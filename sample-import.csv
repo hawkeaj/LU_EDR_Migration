@@ -1,7 +1,7 @@
-name,type,severity,scope,owner,status,logic
-Suspicious certutil download,star,High,Workstations,Detection Engineering,Needs validation,"EventType = ""Process Creation"" AND TgtProcCmdLine contains ""certutil"" AND TgtProcCmdLine contains ""urlcache"" AND SrcProcName not in (""msiexec.exe"",""setup.exe"")"
-PowerShell encoded command,star,High,Workstations,Detection Engineering,Needs validation,"EventType = ""Process Creation"" AND TgtProcCmdLine contains ""-EncodedCommand"" AND SrcProcName in (""powershell.exe"",""pwsh.exe"")"
-Run key persistence,star,High,Windows servers,Detection Engineering,Needs validation,"EventType = ""Registry"" AND RegistryKeyPath contains ""\\Microsoft\\Windows\\CurrentVersion\\Run"" AND SrcProcName not in (""msiexec.exe"",""setup.exe"")"
-Legacy scanner exclusion,exclusion,Medium,Servers,Endpoint Engineering,Needs validation,"Path exclusion: C:\Program Files\LegacyScanner\*; mode: interoperability"
-Privileged login sequence,hunt,Medium,Identity + endpoint,SOC,Backlog,"Five failed admin logons followed by success from same source within 15 minutes"
-Known malware hash,ioc,High,All endpoints,IR,Ready for pilot,"sha256: 1111111111111111111111111111111111111111111111111111111111111111"
+name,type,s1qlVersion,severity,scope,owner,status,logic
+Suspicious certutil download,star,auto,High,Workstations,Detection Engineering,Needs validation,"EventType = ""Process Creation"" AND TgtProcCmdLine contains ""certutil"" AND TgtProcCmdLine contains ""urlcache"" AND SrcProcName not in (""msiexec.exe"",""setup.exe"")"
+PowerShell encoded command,star,1.0,High,Workstations,Detection Engineering,Needs validation,"EventType = ""Process Creation"" AND TgtProcCmdLine contains ""-EncodedCommand"" AND SrcProcName in (""powershell.exe"",""pwsh.exe"")"
+Run key persistence,star,1.0,High,Windows servers,Detection Engineering,Needs validation,"EventType = ""Registry"" AND RegistryKeyPath contains ""\\Microsoft\\Windows\\CurrentVersion\\Run"" AND SrcProcName not in (""msiexec.exe"",""setup.exe"")"
+Legacy scanner exclusion,exclusion,auto,Medium,Servers,Endpoint Engineering,Needs validation,"Path exclusion: C:\Program Files\LegacyScanner\*; mode: interoperability"
+Privileged login sequence,hunt,auto,Medium,Identity + endpoint,SOC,Backlog,"Five failed admin logons followed by success from same source within 15 minutes"
+Known malware hash,ioc,auto,High,All endpoints,IR,Ready for pilot,"sha256: 1111111111111111111111111111111111111111111111111111111111111111"

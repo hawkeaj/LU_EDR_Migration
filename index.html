@@ -45,6 +45,14 @@
               </select>
             </label>
             <label>
+              S1QL version
+              <select id="s1ql-version">
+                <option value="auto" selected>Auto detect</option>
+                <option value="1.0">S1QL 1.0</option>
+                <option value="2.0">S1QL 2.0</option>
+              </select>
+            </label>
+            <label>
               Severity
               <select id="severity">
                 <option>Critical</option>
@@ -103,6 +111,10 @@
           </div>
 
           <div class="preview-grid">
+            <article>
+              <h3>S1QL validation</h3>
+              <div id="s1ql-preview" class="validation-list"></div>
+            </article>
             <article>
               <h3>BIOC or rule builder notes</h3>
               <ul id="bioc-preview"></ul>
