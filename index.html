@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SentinelOne STAR to Cortex Migration Utility</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">Detection engineering migration</p>
+          <h1>SentinelOne STAR to Palo Alto Cortex Utility</h1>
+          <p class="lede">
+            Translate STAR logic into draft Cortex XQL, classify the right Cortex destination, and keep a cutover-ready review matrix for rules, hunts, IOCs, and exclusions.
+          </p>
+        </div>
+        <div class="header-actions">
+          <button id="load-demo" type="button">Load Demo</button>
+          <button id="export-csv" type="button">Export CSV</button>
+          <button id="export-json" type="button">Export JSON</button>
+        </div>
+      </header>
+
+      <section class="summary-grid" id="summary-grid" aria-label="Migration summary"></section>
+
+      <section class="workspace">
+        <form class="panel input-panel" id="item-form">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Translator</p>
+              <h2>Paste a STAR rule or import an export</h2>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              SentinelOne source
+              <select id="source-type">
+                <option value="star">STAR rule</option>
+                <option value="hunt">Deep Visibility hunt</option>
+                <option value="exclusion">Exclusion</option>
+                <option value="ioc">IOC or blocklist item</option>
+              </select>
+            </label>
+            <label>
+              Severity
+              <select id="severity">
+                <option>Critical</option>
+                <option selected>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+            </label>
+            <label>
+              Scope
+              <input id="scope" type="text" value="Workstations" />
+            </label>
+            <label>
+              Owner
+              <input id="owner" type="text" value="Detection Engineering" />
+            </label>
+          </div>
+
+          <label>
+            Name
+            <input id="name" type="text" value="Suspicious PowerShell EncodedCommand" />
+          </label>
+
+          <label>
+            STAR query, exported JSON object, IOC, or exception detail
+            <textarea id="logic" rows="12">EventType = "Process Creation" AND TgtProcCmdLine contains "-EncodedCommand" AND SrcProcName in ("powershell.exe","pwsh.exe")</textarea>
+          </label>
+
+          <div class="button-row">
+            <button type="submit">Add to Matrix</button>
+            <label class="file-button" for="import-file">
+              Import JSON/CSV
+              <input id="import-file" type="file" accept=".json,.csv,text/csv,application/json" />
+            </label>
+            <button id="clear-items" class="quiet" type="button">Clear Local Data</button>
+          </div>
+        </form>
+
+        <aside class="panel translator-panel" aria-label="Cortex translation preview">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Cortex output</p>
+              <h2>Draft translation</h2>
+            </div>
+            <div class="button-row compact">
+              <button id="copy-xql" class="quiet" type="button">Copy XQL</button>
+              <button id="export-translation" class="quiet" type="button">Export Draft</button>
+            </div>
+          </div>
+
+          <div class="translation-meta" id="translation-meta"></div>
+
+          <div class="code-card">
+            <div class="code-card-title">XQL draft</div>
+            <pre id="xql-preview"></pre>
+          </div>
+
+          <div class="preview-grid">
+            <article>
+              <h3>BIOC or rule builder notes</h3>
+              <ul id="bioc-preview"></ul>
+            </article>
+            <article>
+              <h3>Manual review flags</h3>
+              <ul id="issues-preview"></ul>
+            </article>
+          </div>
+
+          <div class="mapping-panel">
+            <h3>Field mapping</h3>
+            <div id="mapping-preview" class="mapping-grid"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="panel guidance-panel">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Migration insights</p>
+            <h2>Cortex destination logic</h2>
+          </div>
+        </div>
+        <div class="guidance-list">
+          <article>
+            <strong>BIOC rule</strong>
+            <p>Endpoint behavior such as process ancestry, command line, file, registry, and network activity.</p>
+          </article>
+          <article>
+            <strong>Correlation rule</strong>
+            <p>Timed sequences, thresholds, joins, identity, firewall, cloud, VPN, email, or SIEM-backed logic.</p>
+          </article>
+          <article>
+            <strong>XQL hunt</strong>
+            <p>Analyst-driven Deep Visibility hunts or noisy logic that needs validation before alerting.</p>
+          </article>
+          <article>
+            <strong>Exception review</strong>
+            <p>Path, signer, hash, performance, interoperability, or alert-suppression items needing risk approval.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel controls-panel">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Triage queue</p>
+            <h2>Migration matrix</h2>
+          </div>
+        </div>
+        <div class="filter-grid">
+          <label>
+            Source
+            <select id="filter-source">
+              <option value="all">All sources</option>
+              <option value="star">STAR rules</option>
+              <option value="hunt">Deep Visibility hunts</option>
+              <option value="exclusion">Exclusions</option>
+              <option value="ioc">IOCs</option>
+            </select>
+          </label>
+          <label>
+            Cortex target
+            <select id="filter-target">
+              <option value="all">All targets</option>
+              <option value="BIOC Rule">BIOC rule</option>
+              <option value="Correlation Rule">Correlation rule</option>
+              <option value="XQL Hunt">XQL hunt</option>
+              <option value="IOC Rule">IOC rule</option>
+              <option value="Exception Review">Exception review</option>
+            </select>
+          </label>
+          <label>
+            Status
+            <select id="filter-status">
+              <option value="all">All statuses</option>
+              <option>Backlog</option>
+              <option>Needs validation</option>
+              <option>Ready for pilot</option>
+              <option>Retire</option>
+            </select>
+          </label>
+          <label>
+            Search
+            <input id="search" type="search" placeholder="PowerShell, signer, hash, path..." />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Inventory Item</th>
+                <th>S1 Source</th>
+                <th>Cortex Target</th>
+                <th>Risk</th>
+                <th>Confidence</th>
+                <th>Status</th>
+                <th>Recommended Work</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="matrix-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel details-panel" id="details-panel" hidden>
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Selected item</p>
+            <h2 id="details-title">Migration detail</h2>
+          </div>
+          <button id="close-details" class="quiet" type="button">Close</button>
+        </div>
+        <div id="details-content" class="details-content"></div>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
