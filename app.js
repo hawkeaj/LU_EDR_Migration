@@ -219,6 +219,189 @@ const eventTypeMappings = {
   "module load": "ENUM.LOAD_IMAGE"
 };
 
+const mitreRules = [
+  {
+    id: "T1059.001",
+    technique: "Command and Scripting Interpreter",
+    subtechnique: "PowerShell",
+    tactics: ["Execution"],
+    confidence: "High",
+    reference: "https://attack.mitre.org/techniques/T1059/001/",
+    match: /\bpowershell(?:\.exe)?\b|\bpwsh(?:\.exe)?\b|-encodedcommand|\b-enc\b|invoke-expression|invoke-webrequest/i,
+    rationale: "Rule context references PowerShell, pwsh, encoded commands, or PowerShell download/execution cmdlets."
+  },
+  {
+    id: "T1059.003",
+    technique: "Command and Scripting Interpreter",
+    subtechnique: "Windows Command Shell",
+    tactics: ["Execution"],
+    confidence: "High",
+    reference: "https://attack.mitre.org/techniques/T1059/003/",
+    match: /\bcmd(?:\.exe)?\b|\/c\s|\/k\s|\.bat\b|\.cmd\b/i,
+    rationale: "Rule context references Windows command shell execution."
+  },
+  {
+    id: "T1059.004",
+    technique: "Command and Scripting Interpreter",
+    subtechnique: "Unix Shell",
+    tactics: ["Execution"],
+    confidence: "Medium",
+    reference: "https://attack.mitre.org/techniques/T1059/004/",
+    match: /\b(?:bash|sh|zsh|ksh|dash)(?:\s|-c|$)|\/bin\/(?:bash|sh|zsh|ksh|dash)\b/i,
+    rationale: "Rule context references Unix shell execution."
+  },
+  {
+    id: "T1059.005",
+    technique: "Command and Scripting Interpreter",
+    subtechnique: "Visual Basic",
+    tactics: ["Execution"],
+    confidence: "High",
+    reference: "https://attack.mitre.org/techniques/T1059/005/",
+    match: /\bwscript(?:\.exe)?\b|\bcscript(?:\.exe)?\b|\.vbs\b|\.vbe\b/i,
+    rationale: "Rule context references Windows Script Host or Visual Basic script execution."
+  },
+  {
+    id: "T1059.007",
+    technique: "Command and Scripting Interpreter",
+    subtechnique: "JavaScript",
+    tactics: ["Execution"],
+    confidence: "Medium",
+    reference: "https://attack.mitre.org/techniques/T1059/007/",
+    match: /\.js\b|\.jse\b|\bnode(?:\.exe)?\b/i,
+    rationale: "Rule context references JavaScript or Node-based script execution."
+  },
+  {
+    id: "T1218.005",
+    technique: "System Binary Proxy Execution",
+    subtechnique: "Mshta",
+    tactics: ["Defense Evasion"],
+    confidence: "High",
+    reference: "https://attack.mitre.org/techniques/T1218/005/",
+    match: /\bmshta(?:\.exe)?\b/i,
+    rationale: "Rule context references mshta proxy execution."
+  },
+  {
+    id: "T1218.010",
+    technique: "System Binary Proxy Execution",
+    subtechnique: "Regsvr32",
+    tactics: ["Defense Evasion"],
+    confidence: "High",
+    reference: "https://attack.mitre.org/techniques/T1218/010/",
+    match: /\bregsvr32(?:\.exe)?\b|\bscrobj\.dll\b|\b\/i:https?:\/\//i,
+    rationale: "Rule context references regsvr32 or scriptlet-based proxy execution."
+  },
+  {
+    id: "T1218.011",
+    technique: "System Binary Proxy Execution",
+    subtechnique: "Rundll32",
+    tactics: ["Defense Evasion"],
+    confidence: "High",
+    reference: "https://attack.mitre.org/techniques/T1218/011/",
+    match: /\brundll32(?:\.exe)?\b/i,
+    rationale: "Rule context references rundll32 proxy execution."
+  },
+  {
+    id: "T1105",
+    technique: "Ingress Tool Transfer",
+    subtechnique: "",
+    tactics: ["Command and Control"],
+    confidence: "Medium",
+    reference: "https://attack.mitre.org/techniques/T1105/",
+    match: /\bcertutil(?:\.exe)?\b|urlcache|bitsadmin|invoke-webrequest|iwr\s|curl(?:\.exe)?\b|wget(?:\.exe)?\b|download|http:\/\/|https:\/\//i,
+    rationale: "Rule context suggests tools or commands used to download or transfer payloads into the environment."
+  },
+  {
+    id: "T1027",
+    technique: "Obfuscated Files or Information",
+    subtechnique: "",
+    tactics: ["Defense Evasion"],
+    confidence: "Medium",
+    reference: "https://attack.mitre.org/techniques/T1027/",
+    match: /encodedcommand|\b-enc\b|base64|frombase64string|obfuscat|xor|compress|gzip/i,
+    rationale: "Rule context references encoded, compressed, or obfuscated content."
+  },
+  {
+    id: "T1547.001",
+    technique: "Boot or Logon Autostart Execution",
+    subtechnique: "Registry Run Keys / Startup Folder",
+    tactics: ["Persistence", "Privilege Escalation"],
+    confidence: "High",
+    reference: "https://attack.mitre.org/techniques/T1547/001/",
+    match: /\\currentversion\\run\b|\\currentversion\\runonce\b|startup folder|\\startup\\|registrykeypath.*\\run/i,
+    rationale: "Rule context references Run/RunOnce keys or Startup folder persistence."
+  },
+  {
+    id: "T1053.005",
+    technique: "Scheduled Task/Job",
+    subtechnique: "Scheduled Task",
+    tactics: ["Execution", "Persistence", "Privilege Escalation"],
+    confidence: "Medium",
+    reference: "https://attack.mitre.org/techniques/T1053/005/",
+    match: /\bschtasks(?:\.exe)?\b|scheduled task|task scheduler|\\tasks\\/i,
+    rationale: "Rule context references Windows scheduled task creation or execution."
+  },
+  {
+    id: "T1047",
+    technique: "Windows Management Instrumentation",
+    subtechnique: "",
+    tactics: ["Execution"],
+    confidence: "Medium",
+    reference: "https://attack.mitre.org/techniques/T1047/",
+    match: /\bwmic(?:\.exe)?\b|wmi-|win32_process|wmiprvse(?:\.exe)?\b|__eventfilter|commandlineeventconsumer/i,
+    rationale: "Rule context references WMI execution or WMI persistence components."
+  },
+  {
+    id: "T1003",
+    technique: "OS Credential Dumping",
+    subtechnique: "",
+    tactics: ["Credential Access"],
+    confidence: "Medium",
+    reference: "https://attack.mitre.org/techniques/T1003/",
+    match: /lsass|mimikatz|sekurlsa|procdump|comsvcs\.dll|minidump|credential dump|sam hive|ntds\.dit/i,
+    rationale: "Rule context references credential dumping tools, targets, or artifacts."
+  },
+  {
+    id: "T1567.002",
+    technique: "Exfiltration Over Web Service",
+    subtechnique: "Exfiltration to Cloud Storage",
+    tactics: ["Exfiltration"],
+    confidence: "High",
+    reference: "https://attack.mitre.org/techniques/T1567/002/",
+    match: /\brclone(?:\.exe)?\b|megasync|mega\.nz|dropbox|google drive|onedrive|box\.com|s3:\/\/|aws s3/i,
+    rationale: "Rule context references cloud-storage tooling or destinations commonly used for exfiltration."
+  },
+  {
+    id: "T1041",
+    technique: "Exfiltration Over C2 Channel",
+    subtechnique: "",
+    tactics: ["Exfiltration"],
+    confidence: "Medium",
+    reference: "https://attack.mitre.org/techniques/T1041/",
+    match: /exfil|upload|dstip is not empty|action_remote_ip|large outbound|outbound transfer|send files/i,
+    rationale: "Rule context suggests outbound transfer or exfiltration behavior."
+  },
+  {
+    id: "T1071.001",
+    technique: "Application Layer Protocol",
+    subtechnique: "Web Protocols",
+    tactics: ["Command and Control"],
+    confidence: "Low",
+    reference: "https://attack.mitre.org/techniques/T1071/001/",
+    match: /http:\/\/|https:\/\/|user-agent|websocket|post\s+http|curl(?:\.exe)?\b/i,
+    rationale: "Rule context references web protocols. This may be C2, download, or benign web activity and needs validation."
+  },
+  {
+    id: "T1486",
+    technique: "Data Encrypted for Impact",
+    subtechnique: "",
+    tactics: ["Impact"],
+    confidence: "Medium",
+    reference: "https://attack.mitre.org/techniques/T1486/",
+    match: /ransom|encrypt files|encrypted extension|vssadmin.*delete|shadow.*copy.*delete|bcdedit.*recoveryenabled/i,
+    rationale: "Rule context references ransomware-style encryption or recovery disruption activity."
+  }
+];
+
 const demoItems = [
   {
     id: makeId(),
@@ -309,6 +492,7 @@ const translationMeta = document.querySelector("#translation-meta");
 const biocPreview = document.querySelector("#bioc-preview");
 const mappingPreview = document.querySelector("#mapping-preview");
 const issuesPreview = document.querySelector("#issues-preview");
+const mitrePreview = document.querySelector("#mitre-preview");
 const copyXqlButton = document.querySelector("#copy-xql");
 const exportTranslationButton = document.querySelector("#export-translation");
 
@@ -397,6 +581,7 @@ function analyzeItem(item) {
 
   const translation = translateToCortex(item, { target, confidence, risk, responseAction }, extracted);
   const downgradedConfidence = lowerConfidence(confidence, translation);
+  const mitre = correlateMitre(item, translation, { target, risk });
 
   return {
     ...item,
@@ -405,7 +590,8 @@ function analyzeItem(item) {
     risk,
     recommendedWork,
     nextChecks,
-    translation
+    translation,
+    mitre
   };
 }
 
@@ -421,6 +607,98 @@ function lowerConfidence(confidence, translation) {
   if (highIssues || lowMappings >= 2) return "Low";
   if (confidence === "High" && (translation.issues.length || lowMappings)) return "Medium";
   return confidence;
+}
+
+function correlateMitre(item, translation, classification) {
+  if (item.type === "exclusion") {
+    return {
+      coverage: "Control / exception review",
+      matches: [],
+      notes: [
+        "Exclusions are mapped to compensating-control review instead of ATT&CK technique coverage.",
+        "If the exclusion suppresses a specific detection, map the suppressed detection logic rather than the exclusion object."
+      ]
+    };
+  }
+
+  const text = [
+    item.name,
+    item.logic,
+    translation.normalizedStar,
+    classification.target
+  ].join(" ").toLowerCase();
+
+  const matched = mitreRules
+    .filter((rule) => rule.match.test(text))
+    .map((rule) => ({
+      id: rule.id,
+      tactic: rule.tactics.join(", "),
+      tactics: rule.tactics,
+      technique: rule.technique,
+      subtechnique: rule.subtechnique,
+      displayName: rule.subtechnique ? `${rule.technique}: ${rule.subtechnique}` : rule.technique,
+      confidence: adjustMitreConfidence(rule, text, translation, classification),
+      rationale: rule.rationale,
+      reference: rule.reference
+    }));
+
+  const deduped = dedupeMitreMatches(matched);
+  const notes = buildMitreNotes(item, deduped, translation, classification);
+
+  return {
+    coverage: deduped.length ? "Mapped" : "Needs analyst mapping",
+    matches: deduped,
+    notes
+  };
+}
+
+function adjustMitreConfidence(rule, text, translation, classification) {
+  if (rule.confidence === "Low") return "Low";
+  if (translation.fieldMap.some((field) => field.confidence === "Low")) return rule.confidence === "High" ? "Medium" : rule.confidence;
+  if (classification.target === "Correlation Rule" && /identity|firewall|cloud|vpn|email|siem/.test(text)) return rule.confidence === "High" ? "Medium" : rule.confidence;
+  return rule.confidence;
+}
+
+function dedupeMitreMatches(matches) {
+  const byId = new Map();
+  const confidenceRank = { High: 3, Medium: 2, Low: 1 };
+
+  matches.forEach((match) => {
+    const existing = byId.get(match.id);
+    if (!existing || confidenceRank[match.confidence] > confidenceRank[existing.confidence]) {
+      byId.set(match.id, match);
+    }
+  });
+
+  return [...byId.values()].sort((a, b) => {
+    const confidenceRankLocal = { High: 3, Medium: 2, Low: 1 };
+    if (confidenceRankLocal[b.confidence] !== confidenceRankLocal[a.confidence]) {
+      return confidenceRankLocal[b.confidence] - confidenceRankLocal[a.confidence];
+    }
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function buildMitreNotes(item, matches, translation, classification) {
+  const notes = [];
+
+  if (!matches.length) {
+    notes.push("No deterministic ATT&CK match was found. Add analyst mapping based on threat behavior, not only field names.");
+  }
+
+  if (classification.target === "Correlation Rule") {
+    notes.push("Correlation candidates may span multiple ATT&CK techniques; validate against the complete sequence and data sources.");
+  }
+
+  if (translation.responseAction) {
+    notes.push("Response actions are not ATT&CK coverage by themselves; map the triggering behavior separately from the automated action.");
+  }
+
+  if (item.type === "ioc") {
+    notes.push("IOC-only rules often map to malware or infrastructure tracking rather than a precise ATT&CK behavior unless surrounding behavior is present.");
+  }
+
+  return notes;
 }
 
 function analyzedItems() {
@@ -1023,7 +1301,7 @@ function renderSummary() {
     total: data.length,
     star: data.filter((item) => item.type === "star").length,
     translated: data.filter((item) => item.translation.xql && item.type !== "exclusion").length,
-    manualReview: data.filter((item) => item.translation.issues.some((issue) => issue.level === "High" || issue.level === "Medium")).length,
+    mitreMapped: data.filter((item) => item.mitre.matches.length).length,
     highRisk: data.filter((item) => item.risk === "High").length
   };
 
@@ -1031,7 +1309,7 @@ function renderSummary() {
     <article class="metric-card"><small>Total inventory</small><span>${counts.total}</span><p>Rules, hunts, IOCs, and exclusions staged for cutover.</p></article>
     <article class="metric-card"><small>STAR rules</small><span>${counts.star}</span><p>Primary SentinelOne detections ready for Cortex translation.</p></article>
     <article class="metric-card"><small>Draft outputs</small><span>${counts.translated}</span><p>Items with generated XQL, IOC, or BIOC migration artifacts.</p></article>
-    <article class="metric-card"><small>Manual review</small><span>${counts.manualReview}</span><p>Field gaps, sequence logic, broad exclusions, or response-action caveats.</p></article>
+    <article class="metric-card"><small>MITRE mapped</small><span>${counts.mitreMapped}</span><p>Items with deterministic ATT&CK tactic and technique correlation.</p></article>
     <article class="metric-card"><small>High risk</small><span>${counts.highRisk}</span><p>Prioritize for owner review and staged pilot validation.</p></article>
   `;
 }
@@ -1062,6 +1340,8 @@ function renderTranslationPreview() {
   issuesPreview.innerHTML = draft.translation.issues.length
     ? draft.translation.issues.map((issue) => `<li><strong>${escapeHtml(issue.level)}:</strong> ${escapeHtml(issue.text)}</li>`).join("")
     : `<li>No blocking translation gaps detected for this draft.</li>`;
+
+  mitrePreview.innerHTML = mitreHtml(draft.mitre);
 }
 
 function renderMatrix() {
@@ -1078,7 +1358,7 @@ function renderMatrix() {
     <tr>
       <td><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)} / ${escapeHtml(item.owner)}</small></td>
       <td><span class="pill">${sourceLabel(item.type)}</span><small>${escapeHtml(item.severity)}</small></td>
-      <td>${escapeHtml(item.target)}<small>${escapeHtml(item.translation.complexity)} complexity</small></td>
+      <td>${escapeHtml(item.target)}<small>${escapeHtml(item.translation.complexity)} complexity</small><small>${escapeHtml(primaryMitreLabel(item.mitre))}</small></td>
       <td><span class="${riskClass(item.risk)}">${escapeHtml(item.risk)}</span></td>
       <td><span class="${confidenceClass(item.confidence)}">${escapeHtml(item.confidence)}</span></td>
       <td>
@@ -1130,6 +1410,11 @@ function showDetails(id) {
     <article class="detail-box">
       <h3>Manual Review Flags</h3>
       <ul>${item.translation.issues.length ? item.translation.issues.map((issue) => `<li><strong>${escapeHtml(issue.level)}:</strong> ${escapeHtml(issue.text)}</li>`).join("") : "<li>No blocking translation gaps detected.</li>"}</ul>
+    </article>
+    <article class="detail-box wide">
+      <h3>MITRE ATT&CK Correlation</h3>
+      <div class="mitre-list">${mitreHtml(item.mitre)}</div>
+      ${item.mitre.notes.length ? `<ul>${item.mitre.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>` : ""}
     </article>
     <article class="detail-box wide">
       <h3>Field Mapping</h3>
@@ -1326,6 +1611,11 @@ function exportCsv() {
     "confidence",
     "complexity",
     "recommendedWork",
+    "mitreCoverage",
+    "mitreTechniques",
+    "mitreTactics",
+    "mitreRationale",
+    "mitreReferences",
     "xql",
     "biocConditions",
     "fieldMappings",
@@ -1344,6 +1634,11 @@ function exportCsv() {
     item.confidence,
     item.translation.complexity,
     item.recommendedWork,
+    item.mitre.coverage,
+    item.mitre.matches.map((match) => `${match.id} ${match.displayName} (${match.confidence})`).join(" | "),
+    unique(item.mitre.matches.flatMap((match) => match.tactics)).join(" | "),
+    item.mitre.matches.map((match) => match.rationale).join(" | "),
+    item.mitre.matches.map((match) => match.reference).join(" | "),
     item.translation.xql,
     item.translation.biocConditions.join(" | "),
     item.translation.fieldMap.map((field) => `${field.source}->${field.cortex} (${field.confidence})`).join(" | "),
@@ -1417,6 +1712,28 @@ function confidenceClass(confidence) {
 
 function listHtml(itemsToRender) {
   return itemsToRender.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+}
+
+function mitreHtml(mitre) {
+  if (!mitre.matches.length) {
+    return `
+      <p class="empty-note">${escapeHtml(mitre.notes[0] || "No ATT&CK correlation detected.")}</p>
+    `;
+  }
+
+  return mitre.matches.map((match) => `
+    <article class="mitre-card">
+      <strong><a href="${escapeHtml(match.reference)}" target="_blank" rel="noreferrer">${escapeHtml(match.id)}</a> ${escapeHtml(match.displayName)}</strong>
+      <small>${escapeHtml(match.tactic)} / ${escapeHtml(match.confidence)} confidence</small>
+      <p>${escapeHtml(match.rationale)}</p>
+    </article>
+  `).join("");
+}
+
+function primaryMitreLabel(mitre) {
+  const primary = mitre.matches[0];
+  if (!primary) return "MITRE: needs analyst mapping";
+  return `MITRE: ${primary.id} ${primary.subtechnique || primary.technique}`;
 }
 
 function escapeHtml(value) {

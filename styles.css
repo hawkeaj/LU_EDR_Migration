@@ -344,7 +344,7 @@ button:focus-visible,
 
 .preview-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 14px;
 }
@@ -409,6 +409,36 @@ button:focus-visible,
 
 .mapping-card p,
 .empty-note {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.mitre-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mitre-card {
+  border: 1px solid rgba(23, 105, 170, 0.22);
+  border-radius: var(--radius);
+  background: #ffffff;
+  padding: 11px;
+}
+
+.mitre-card strong,
+.mitre-card a {
+  color: var(--accent-dark);
+}
+
+.mitre-card small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.mitre-card p {
   margin: 6px 0 0;
   color: var(--muted);
   line-height: 1.45;

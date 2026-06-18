@@ -558,6 +558,11 @@ risk,
 confidence,
 complexity,
 recommendedWork,
+mitreCoverage,
+mitreTechniques,
+mitreTactics,
+mitreRationale,
+mitreReferences,
 xql,
 biocConditions,
 fieldMappings,
@@ -582,10 +587,90 @@ translation.fieldMap,
 translation.biocConditions,
 translation.issues,
 translation.complexity,
-translation.responseAction
+translation.responseAction,
+mitre.coverage,
+mitre.matches,
+mitre.notes
 ```
 
-## 22. Known Limitations
+## 22. MITRE ATT&CK Correlation
+
+MITRE ATT&CK correlation is deterministic and context-based. The utility does not call MITRE APIs at runtime and does not infer adversary intent beyond observable rule context.
+
+Each mapped result includes:
+
+```text
+id,
+tactic,
+tactics,
+technique,
+subtechnique,
+displayName,
+confidence,
+rationale,
+reference
+```
+
+Correlation inputs:
+
+```text
+rule name,
+original SentinelOne logic,
+normalized STAR logic,
+generated Cortex XQL,
+Cortex target classification
+```
+
+### MITRE Coverage Status
+
+| Status | Meaning |
+|---|---|
+| `Mapped` | One or more deterministic ATT&CK matches were found |
+| `Needs analyst mapping` | No deterministic match was found |
+| `Control / exception review` | Source item is an exclusion and should not be mapped as detection coverage |
+
+### MITRE Matching Rules
+
+| Context signal | ATT&CK ID | Tactic | Technique / sub-technique | Confidence |
+|---|---|---|---|---|
+| `powershell`, `pwsh`, `-EncodedCommand`, `-enc`, `Invoke-Expression`, `Invoke-WebRequest` | `T1059.001` | Execution | Command and Scripting Interpreter: PowerShell | High |
+| `cmd.exe`, `/c`, `/k`, `.bat`, `.cmd` | `T1059.003` | Execution | Command and Scripting Interpreter: Windows Command Shell | High |
+| `bash`, `sh`, `zsh`, `/bin/bash`, `/bin/sh` | `T1059.004` | Execution | Command and Scripting Interpreter: Unix Shell | Medium |
+| `wscript`, `cscript`, `.vbs`, `.vbe` | `T1059.005` | Execution | Command and Scripting Interpreter: Visual Basic | High |
+| `.js`, `.jse`, `node.exe` | `T1059.007` | Execution | Command and Scripting Interpreter: JavaScript | Medium |
+| `mshta` | `T1218.005` | Defense Evasion | System Binary Proxy Execution: Mshta | High |
+| `regsvr32`, `scrobj.dll`, `regsvr32 /i:http` | `T1218.010` | Defense Evasion | System Binary Proxy Execution: Regsvr32 | High |
+| `rundll32` | `T1218.011` | Defense Evasion | System Binary Proxy Execution: Rundll32 | High |
+| `certutil`, `urlcache`, `bitsadmin`, `curl`, `wget`, `download`, HTTP/HTTPS download context | `T1105` | Command and Control | Ingress Tool Transfer | Medium |
+| `EncodedCommand`, `base64`, `FromBase64String`, `obfuscation`, `xor`, `gzip` | `T1027` | Defense Evasion | Obfuscated Files or Information | Medium |
+| `CurrentVersion\Run`, `RunOnce`, Startup folder paths | `T1547.001` | Persistence, Privilege Escalation | Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder | High |
+| `schtasks`, scheduled task, Task Scheduler | `T1053.005` | Execution, Persistence, Privilege Escalation | Scheduled Task/Job: Scheduled Task | Medium |
+| `wmic`, `WMI`, `Win32_Process`, `WmiPrvSE`, `__EventFilter`, `CommandLineEventConsumer` | `T1047` | Execution | Windows Management Instrumentation | Medium |
+| `lsass`, `mimikatz`, `sekurlsa`, `procdump`, `comsvcs.dll`, `minidump`, `SAM`, `ntds.dit` | `T1003` | Credential Access | OS Credential Dumping | Medium |
+| `rclone`, `MEGASync`, `mega.nz`, Dropbox, Google Drive, OneDrive, Box, S3 | `T1567.002` | Exfiltration | Exfiltration Over Web Service: Exfiltration to Cloud Storage | High |
+| `exfil`, `upload`, `DstIP is not empty`, large outbound transfer, send files | `T1041` | Exfiltration | Exfiltration Over C2 Channel | Medium |
+| HTTP/HTTPS, user-agent, WebSocket, POST HTTP, `curl` | `T1071.001` | Command and Control | Application Layer Protocol: Web Protocols | Low |
+| ransomware, file encryption, shadow copy deletion, recovery disruption | `T1486` | Impact | Data Encrypted for Impact | Medium |
+
+### MITRE Confidence Adjustment
+
+MITRE confidence is lowered when:
+
+- The conversion contains low-confidence field mappings.
+- The item is a correlation rule involving external data sources such as identity, firewall, cloud, VPN, email, or SIEM.
+- The matched technique is broad by nature, such as web protocols.
+
+### MITRE Correlation Notes
+
+The utility adds explanatory notes when:
+
+- No deterministic ATT&CK match is found.
+- The rule is a correlation candidate and may span multiple techniques.
+- Automated response logic exists and should be separated from behavior mapping.
+- The item is IOC-only and may not represent a precise behavior without surrounding context.
+- The item is an exclusion and should be reviewed as a control gap or compensating-control decision.
+
+## 23. Known Limitations
 
 The utility does not yet:
 
@@ -599,8 +684,10 @@ The utility does not yet:
 - Distinguish all file source/target/result semantics.
 - Determine whether a destination tenant has the needed datasets.
 - Deduplicate against existing Cortex rules.
+- Guarantee ATT&CK mapping for every possible detection objective.
+- Distinguish threat behavior from generic administrative tooling without analyst context.
 
-## 23. Required Human Validation
+## 24. Required Human Validation
 
 Before production enablement, validate:
 
@@ -614,4 +701,4 @@ Before production enablement, validate:
 8. Suppression/cooldown behavior.
 9. Automated response action safety.
 10. Exception owner, scope, expiration, and compensating controls.
-
+11. MITRE ATT&CK tactic and technique correctness.

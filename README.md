@@ -17,6 +17,7 @@ Then browse to `http://127.0.0.1:4288/`.
 - Translates pasted SentinelOne STAR logic into draft Cortex XQL.
 - Maps common SentinelOne fields such as `EventType`, `TgtProcCmdLine`, `SrcProcName`, `RegistryKeyPath`, `DstIP`, and hash fields to Cortex-style fields.
 - Classifies each item as BIOC Rule, Correlation Rule, XQL Hunt, IOC Rule, or Exception Review.
+- Correlates rule context to MITRE ATT&CK tactics, techniques, and sub-techniques with confidence and rationale.
 - Extracts BIOC/rule-builder notes, manual-review flags, complexity, risk, and confidence.
 - Imports SentinelOne-style JSON exports or CSV inventory rows.
 - Exports the enriched migration matrix as CSV or JSON, including the draft XQL and field map.
