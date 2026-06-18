@@ -16,7 +16,8 @@ Then browse to `http://127.0.0.1:4288/`.
 
 - Translates pasted SentinelOne STAR logic into draft Cortex XQL.
 - Validates STAR and hunt logic as S1QL with selectable Auto, 1.0, and 2.0 modes before conversion.
-- Maps common SentinelOne fields such as `EventType`, `TgtProcCmdLine`, `SrcProcName`, `RegistryKeyPath`, `DstIP`, and hash fields to Cortex-style fields.
+- Maps a broad SentinelOne/S1QL field registry to Cortex-style fields, including event metadata, process, parent process, file, generic object, registry, network, DNS, identity, endpoint, signature, module, and threat metadata fields.
+- Normalizes common S1QL spelling variants such as `ObjectType`, `object_type`, and `Object Type`, then applies contextual mapping for generic object fields based on surrounding `ObjectType` logic.
 - Classifies each item as BIOC Rule, Correlation Rule, XQL Hunt, IOC Rule, or Exception Review.
 - Correlates rule context to MITRE ATT&CK tactics, techniques, and sub-techniques with confidence and rationale.
 - Extracts BIOC/rule-builder notes, manual-review flags, complexity, risk, and confidence.
@@ -47,7 +48,7 @@ For JSON exports, the importer looks for arrays named `rules`, `items`, `data`, 
 Deploy the utility with the Vercel project root set to:
 
 ```text
-xdr-cutover-utility
+LU_EDR_Migration
 ```
 
 No build step is required; the folder is a static site. `vercel.json` adds clean URLs and basic browser security headers.

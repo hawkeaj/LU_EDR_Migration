@@ -199,6 +199,168 @@ const fieldMappings = {
     label: "Operating system",
     confidence: "High",
     notes: "Use to split Windows, macOS, and Linux logic where needed."
+  },
+  objecttype: {
+    cortex: "event_type",
+    label: "Object type",
+    confidence: "High",
+    notes: "Semantic mapping: SentinelOne object type values such as Process, File, Registry, Network, and Module become Cortex event_type enums."
+  },
+  objectname: {
+    cortex: "action_process_image_name",
+    label: "Object name",
+    confidence: "Medium",
+    notes: "Generic S1 object name. Usually maps to action process/file/registry/network fields depending on ObjectType; verify with the surrounding rule context."
+  },
+  objectpath: {
+    cortex: "action_file_path",
+    label: "Object path",
+    confidence: "Medium",
+    notes: "Generic S1 object path. Confirm whether the object is a process image, file, registry key, or another entity before production use."
+  },
+  objecthash: {
+    cortex: "action_file_sha256",
+    label: "Object hash",
+    confidence: "Medium",
+    notes: "Generic S1 object hash. Assumes SHA-256 unless the source value or export identifies MD5/SHA-1."
+  },
+  objectsha256: {
+    cortex: "action_file_sha256",
+    label: "Object SHA-256",
+    confidence: "High",
+    notes: "SHA-256 hash for a file or process object."
+  },
+  objectsha1: {
+    cortex: "action_file_sha1",
+    label: "Object SHA-1",
+    confidence: "High",
+    notes: "SHA-1 hash for a file or process object."
+  },
+  objectmd5: {
+    cortex: "action_file_md5",
+    label: "Object MD5",
+    confidence: "High",
+    notes: "MD5 hash for a file or process object."
+  },
+  processname: {
+    cortex: "action_process_image_name",
+    label: "Process name",
+    confidence: "High",
+    notes: "Generic process name mapped to the action process."
+  },
+  processcmdline: {
+    cortex: "action_process_image_command_line",
+    label: "Process command line",
+    confidence: "High",
+    notes: "Generic process command line mapped to the action process command line."
+  },
+  processcommandline: {
+    cortex: "action_process_image_command_line",
+    label: "Process command line",
+    confidence: "High",
+    notes: "Generic process command line mapped to the action process command line."
+  },
+  processpath: {
+    cortex: "action_process_image_path",
+    label: "Process path",
+    confidence: "High",
+    notes: "Generic process path mapped to the action process image path."
+  },
+  parentprocessname: {
+    cortex: "actor_process_image_name",
+    label: "Parent process name",
+    confidence: "High",
+    notes: "Parent process name mapped to the actor process."
+  },
+  parentprocesscmdline: {
+    cortex: "actor_process_command_line",
+    label: "Parent process command line",
+    confidence: "High",
+    notes: "Parent process command line mapped to actor process command line."
+  },
+  parentprocesspath: {
+    cortex: "actor_process_image_path",
+    label: "Parent process path",
+    confidence: "High",
+    notes: "Parent process path mapped to actor process image path."
+  },
+  filename: {
+    cortex: "action_file_name",
+    label: "File name",
+    confidence: "High",
+    notes: "File name for file-object conditions."
+  },
+  fileextension: {
+    cortex: "action_file_extension",
+    label: "File extension",
+    confidence: "Medium",
+    notes: "File extension availability should be validated against tenant telemetry."
+  },
+  ipaddress: {
+    cortex: "action_remote_ip",
+    label: "IP address",
+    confidence: "Medium",
+    notes: "Generic IP mapped to remote IP; validate directionality before production use."
+  },
+  destinationip: {
+    cortex: "action_remote_ip",
+    label: "Destination IP",
+    confidence: "High",
+    notes: "Destination IP mapped to remote IP."
+  },
+  destinationport: {
+    cortex: "action_remote_port",
+    label: "Destination port",
+    confidence: "High",
+    notes: "Destination port mapped to remote port."
+  },
+  remoteip: {
+    cortex: "action_remote_ip",
+    label: "Remote IP",
+    confidence: "High",
+    notes: "Remote IP for network activity."
+  },
+  remoteport: {
+    cortex: "action_remote_port",
+    label: "Remote port",
+    confidence: "High",
+    notes: "Remote port for network activity."
+  },
+  dnsrequest: {
+    cortex: "action_external_hostname",
+    label: "DNS request",
+    confidence: "Medium",
+    notes: "DNS request mapped to external hostname; validate DNS dataset availability."
+  },
+  dnsquery: {
+    cortex: "action_external_hostname",
+    label: "DNS query",
+    confidence: "Medium",
+    notes: "DNS query mapped to external hostname; validate DNS dataset availability."
+  },
+  accountname: {
+    cortex: "actor_effective_username",
+    label: "Account name",
+    confidence: "High",
+    notes: "Account or user context mapped to actor effective username."
+  },
+  userprincipalname: {
+    cortex: "actor_effective_username",
+    label: "User principal name",
+    confidence: "Medium",
+    notes: "UPN mapped to actor effective username; validate exact identity field in tenant telemetry."
+  },
+  agentuuid: {
+    cortex: "agent_id",
+    label: "Agent UUID",
+    confidence: "Medium",
+    notes: "Agent identifier mapped to Cortex agent_id where available."
+  },
+  groupname: {
+    cortex: "agent_installation_package",
+    label: "Group name",
+    confidence: "Low",
+    notes: "S1 group scoping usually becomes endpoint group, tag, or deployment scoping rather than a direct event field."
   }
 };
 
@@ -427,6 +589,207 @@ const s1qlKnownFieldNames = new Set([
   "sha1",
   "md5"
 ]);
+
+const fieldAliases = {
+  object: "objectname",
+  objecttype: "objecttype",
+  objecttypename: "objecttype",
+  objectname: "objectname",
+  objectpath: "objectpath",
+  objectfullpath: "objectpath",
+  objecthash: "objecthash",
+  objectsha256: "objectsha256",
+  objectsha1: "objectsha1",
+  objectmd5: "objectmd5",
+  targetprocessname: "tgtprocname",
+  targetprocesscmdline: "tgtproccmdline",
+  targetprocesscommandline: "tgtproccmdline",
+  targetprocesspath: "tgtprocpath",
+  parentprocessname: "parentprocessname",
+  parentprocesscmdline: "parentprocesscmdline",
+  parentprocesscommandline: "parentprocesscmdline",
+  parentprocesspath: "parentprocesspath",
+  sourceprocessname: "srcprocname",
+  sourceprocesscmdline: "srcproccmdline",
+  sourceprocesspath: "srcprocpath",
+  processcommandline: "processcommandline",
+  commandline: "processcmdline",
+  cmdline: "processcmdline",
+  imagepath: "processpath",
+  imagepathname: "processpath",
+  filepathname: "filepath",
+  fullfilepath: "filefullpath",
+  destinationip: "destinationip",
+  destinationport: "destinationport",
+  dstaddress: "dstip",
+  dstipaddress: "dstip",
+  dstportnumber: "dstport",
+  remoteaddress: "remoteip",
+  remoteipaddress: "remoteip",
+  remoteportnumber: "remoteport",
+  domainname: "domain",
+  hostname: "hostname",
+  computername: "hostname",
+  endpoint: "endpointname",
+  endpointname: "endpointname",
+  username: "username",
+  accountname: "accountname",
+  userprincipalname: "userprincipalname"
+};
+
+const supplementalFieldMappings = {
+  eventid: ["event_id", "Event ID", "Medium", "Event identifier. Validate Cortex availability for the source dataset."],
+  eventname: ["event_sub_type", "Event name", "Medium", "Event name mapped to event subtype where available."],
+  eventsubtype: ["event_sub_type", "Event subtype", "Medium", "Event subtype mapped to Cortex event_sub_type."],
+  eventtime: ["_time", "Event time", "High", "Event timestamp mapped to Cortex _time."],
+  timestamp: ["_time", "Timestamp", "High", "Event timestamp mapped to Cortex _time."],
+  createdat: ["_time", "Created at", "Medium", "Creation timestamp mapped to _time for review; validate exact temporal semantics."],
+  updatedat: ["_time", "Updated at", "Low", "Updated timestamp is not always equivalent to event time; validate before use."],
+
+  agentid: ["agent_id", "Agent ID", "High", "Endpoint agent identifier."],
+  agentuuid: ["agent_id", "Agent UUID", "High", "Endpoint agent UUID mapped to Cortex agent_id."],
+  agentversion: ["agent_version", "Agent version", "Medium", "Agent version field; validate tenant schema."],
+  agentos: ["agent_os_type", "Agent OS", "High", "Agent operating system."],
+  agentostype: ["agent_os_type", "Agent OS type", "High", "Agent operating system type."],
+  agenthostname: ["agent_hostname", "Agent hostname", "High", "Agent hostname."],
+  endpointid: ["agent_id", "Endpoint ID", "Medium", "Endpoint identifier mapped to agent_id where available."],
+  endpointtype: ["agent_os_type", "Endpoint type", "Low", "Endpoint type usually informs scope rather than detection logic; validate mapping."],
+  endpointos: ["agent_os_type", "Endpoint OS", "High", "Endpoint operating system type."],
+  computername: ["agent_hostname", "Computer name", "High", "Computer name mapped to agent hostname."],
+  machineid: ["agent_id", "Machine ID", "Medium", "Machine identifier mapped to agent_id where available."],
+  siteid: ["agent_installation_package", "Site ID", "Low", "SentinelOne site identity usually maps to scope/tags rather than a direct event field."],
+  site: ["agent_installation_package", "Site", "Low", "SentinelOne site usually maps to scope/tags rather than a direct event field."],
+  groupid: ["agent_installation_package", "Group ID", "Low", "SentinelOne group usually maps to endpoint scope/tags rather than a direct event field."],
+
+  pid: ["action_process_instance_id", "PID", "Medium", "Process ID mapped to action process instance when available."],
+  processid: ["action_process_instance_id", "Process ID", "Medium", "Process ID mapped to action process instance when available."],
+  tgtprocpid: ["action_process_instance_id", "Target process PID", "Medium", "Target process ID."],
+  srcprocpid: ["actor_process_instance_id", "Source process PID", "Medium", "Source or parent process ID."],
+  parentpid: ["actor_process_instance_id", "Parent PID", "Medium", "Parent process ID mapped to actor process instance."],
+  parentprocessid: ["actor_process_instance_id", "Parent process ID", "Medium", "Parent process ID mapped to actor process instance."],
+  processuser: ["actor_effective_username", "Process user", "Medium", "Process user mapped to actor effective username."],
+  processintegritylevel: ["action_process_integrity_level", "Process integrity level", "Medium", "Windows integrity level; validate field availability."],
+  integritylevel: ["action_process_integrity_level", "Integrity level", "Medium", "Windows integrity level; validate field availability."],
+  signer: ["action_process_signature_vendor", "Signer", "Medium", "Signer/vendor mapped to process signature vendor where available."],
+  signeridentity: ["action_process_signature_vendor", "Signer identity", "Medium", "Signer identity mapped to process signature vendor where available."],
+  signedstatus: ["action_process_signature_status", "Signed status", "Medium", "Signature status mapped to process signature status where available."],
+  signaturestatus: ["action_process_signature_status", "Signature status", "Medium", "Signature status mapped to process signature status."],
+  publisher: ["action_process_signature_vendor", "Publisher", "Medium", "Publisher mapped to signature vendor where available."],
+  certificate: ["action_process_signature_vendor", "Certificate", "Low", "Certificate matching may need signer, thumbprint, or chain-specific fields."],
+
+  filesize: ["action_file_size", "File size", "Medium", "File size mapped to action file size where available."],
+  filetype: ["action_file_type", "File type", "Medium", "File type mapped to action file type where available."],
+  oldfilepath: ["action_file_path", "Old file path", "Low", "Rename/move events may need old/new path-specific fields; validate event family."],
+  newfilepath: ["action_file_path", "New file path", "Low", "Rename/move events may need old/new path-specific fields; validate event family."],
+  oldfilename: ["action_file_name", "Old file name", "Low", "Rename events may need old/new name-specific fields; validate event family."],
+  newfilename: ["action_file_name", "New file name", "Low", "Rename events may need old/new name-specific fields; validate event family."],
+
+  registrykey: ["action_registry_key_name", "Registry key", "High", "Registry key mapped to Cortex registry key name."],
+  registrypath: ["action_registry_key_name", "Registry path", "High", "Registry path mapped to Cortex registry key name."],
+  registrykeyname: ["action_registry_key_name", "Registry key name", "High", "Registry key name."],
+  registryvaluename: ["action_registry_value_name", "Registry value name", "High", "Registry value name."],
+  registrydata: ["action_registry_data", "Registry data", "Medium", "Registry value data."],
+  registryvaluepath: ["action_registry_key_name", "Registry value path", "Medium", "Registry value path mapped to key name; verify key/value split."],
+
+  srcipaddress: ["actor_remote_ip", "Source IP address", "Medium", "Source IP mapped to actor remote IP; validate source directionality."],
+  sourceipaddress: ["actor_remote_ip", "Source IP address", "Medium", "Source IP mapped to actor remote IP; validate source directionality."],
+  sourceip: ["actor_remote_ip", "Source IP", "Medium", "Source IP mapped to actor remote IP; validate source directionality."],
+  sourceport: ["actor_remote_port", "Source port", "Medium", "Source port mapped to actor remote port; validate source directionality."],
+  dsthostname: ["action_external_hostname", "Destination hostname", "Medium", "Destination hostname."],
+  destinationhostname: ["action_external_hostname", "Destination hostname", "Medium", "Destination hostname."],
+  remotehostname: ["action_external_hostname", "Remote hostname", "Medium", "Remote hostname."],
+  urlhost: ["action_external_hostname", "URL host", "Medium", "URL host mapped to external hostname."],
+  requesturl: ["action_url", "Request URL", "Medium", "Request URL mapped to action_url where available."],
+  targeturl: ["action_url", "Target URL", "Medium", "Target URL mapped to action_url where available."],
+  dnsresponse: ["action_remote_ip", "DNS response", "Low", "DNS response may require resolved-IP-specific fields; validate tenant schema."],
+  protocol: ["action_network_protocol", "Protocol", "Medium", "Network protocol; validate field availability."],
+  networkprotocol: ["action_network_protocol", "Network protocol", "Medium", "Network protocol; validate field availability."],
+
+  loginuser: ["actor_effective_username", "Login user", "High", "Login user mapped to actor effective username."],
+  osusername: ["actor_effective_username", "OS username", "High", "OS username mapped to actor effective username."],
+  domainuser: ["actor_effective_username", "Domain user", "Medium", "Domain user mapped to actor effective username; validate domain handling."],
+  userdomain: ["actor_effective_username", "User domain", "Low", "User domain may require a separate identity field; validate tenant schema."],
+
+  threatname: ["causality_actor_process_image_name", "Threat name", "Low", "Threat name is detection metadata, not raw endpoint telemetry; validate Cortex alert dataset usage."],
+  threatid: ["alert_id", "Threat ID", "Low", "Threat ID maps better to alert data than xdr_data endpoint telemetry."],
+  analystverdict: ["event_sub_type", "Analyst verdict", "Low", "Verdict is metadata and may not exist in xdr_data."],
+  confidencelevel: ["event_sub_type", "Confidence level", "Low", "Confidence level is detection metadata; validate destination dataset."],
+  detectionname: ["event_sub_type", "Detection name", "Low", "Detection name is alert metadata, not raw endpoint telemetry."],
+  rulename: ["event_sub_type", "Rule name", "Low", "Rule name is alert metadata, not raw endpoint telemetry."],
+  ruleid: ["event_sub_type", "Rule ID", "Low", "Rule ID is alert metadata, not raw endpoint telemetry."],
+
+  modulepath: ["action_module_path", "Module path", "Medium", "Loaded module path where available."],
+  modulename: ["action_module_name", "Module name", "Medium", "Loaded module name where available."],
+  modulesha256: ["action_module_sha256", "Module SHA-256", "Medium", "Loaded module SHA-256 where available."]
+};
+
+Object.entries(supplementalFieldMappings).forEach(([key, [cortex, label, confidence, notes]]) => {
+  if (!fieldMappings[key]) fieldMappings[key] = { cortex, label, confidence, notes };
+});
+
+Object.assign(fieldAliases, {
+  "event type": "eventtype",
+  "event name": "eventname",
+  "event subtype": "eventsubtype",
+  "event time": "eventtime",
+  "object type": "objecttype",
+  "object name": "objectname",
+  "object path": "objectpath",
+  "object full path": "objectpath",
+  "object hash": "objecthash",
+  "object sha256": "objectsha256",
+  "object sha1": "objectsha1",
+  "object md5": "objectmd5",
+  "process name": "processname",
+  "process command line": "processcommandline",
+  "process cmdline": "processcmdline",
+  "process path": "processpath",
+  "parent process name": "parentprocessname",
+  "parent process command line": "parentprocesscmdline",
+  "parent process path": "parentprocesspath",
+  "file name": "filename",
+  "file path": "filepath",
+  "file full path": "filefullpath",
+  "file extension": "fileextension",
+  "file hash": "filehash",
+  "registry key": "registrykey",
+  "registry path": "registrypath",
+  "registry key path": "registrykeypath",
+  "registry value": "registryvalue",
+  "registry value name": "registryvaluename",
+  "registry value data": "registryvaluedata",
+  "destination ip": "destinationip",
+  "destination port": "destinationport",
+  "destination hostname": "destinationhostname",
+  "remote ip": "remoteip",
+  "remote port": "remoteport",
+  "remote hostname": "remotehostname",
+  "source ip": "sourceip",
+  "source port": "sourceport",
+  "dns request": "dnsrequest",
+  "dns query": "dnsquery",
+  "dns response": "dnsresponse",
+  "request url": "requesturl",
+  "target url": "targeturl",
+  "url host": "urlhost",
+  "account name": "accountname",
+  "user principal name": "userprincipalname",
+  "login user": "loginuser",
+  "os username": "osusername",
+  "agent id": "agentid",
+  "agent uuid": "agentuuid",
+  "agent version": "agentversion",
+  "agent hostname": "agenthostname",
+  "endpoint id": "endpointid",
+  "endpoint name": "endpointname",
+  "computer name": "computername",
+  "site name": "sitename",
+  "group name": "groupname",
+  "threat name": "threatname",
+  "rule name": "rulename",
+  "module name": "modulename",
+  "module path": "modulepath"
+});
 
 const demoItems = [
   {
@@ -661,7 +1024,7 @@ function validateS1ql(item, extracted) {
   }
 
   const requestedVersion = item.s1qlVersion || "auto";
-  const query = normalizeRuleSpacing(extracted.query);
+  const query = normalizeKnownFieldPhrases(normalizeRuleSpacing(extracted.query));
   const findings = [];
 
   if (!query) {
@@ -770,7 +1133,7 @@ function checkS1qlConditionSyntax(query, findings) {
   }
 
   conditions.forEach((condition) => {
-    const key = condition.field.toLowerCase();
+    const key = normalizeFieldKey(condition.field);
     const operator = condition.operator.toLowerCase();
     const value = condition.value.trim();
 
@@ -861,12 +1224,13 @@ function summarizeS1qlStatus(status, requestedVersion, detectedVersion) {
 
 function extractS1qlConditions(query) {
   const conditions = [];
+  const normalizedQuery = normalizeKnownFieldPhrases(query);
   const operatorPattern = /(is\s+not\s+empty|is\s+empty|not\s+contains|starts\s+with|ends\s+with|not\s+in|contains|matches|regexp|in|!=|>=|<=|=|>|<)/i;
   const valuePattern = /(?!(?:AND|OR|NOT)\b)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^()"']+|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')*\)|[^\s)]+)/;
   const conditionPattern = new RegExp(`\\b([A-Za-z][A-Za-z0-9_]*)\\b\\s+${operatorPattern.source}(?:\\s+${valuePattern.source})?`, "gi");
   let match;
 
-  while ((match = conditionPattern.exec(query))) {
+  while ((match = conditionPattern.exec(normalizedQuery))) {
     conditions.push({
       field: match[1],
       operator: match[2].replace(/\s+/g, " "),
@@ -1102,7 +1466,14 @@ function translateToCortex(item, classification, extracted, s1ql) {
   const conditionMap = [];
   const fieldMap = [];
   const seenFields = new Set();
-  const query = normalizeRuleSpacing(extracted.query);
+  const query = normalizeKnownFieldPhrases(normalizeRuleSpacing(extracted.query));
+  const translationContext = {
+    issues,
+    fieldMap,
+    conditionMap,
+    seenFields,
+    objectTypeHint: inferObjectTypeHint(query)
+  };
   let filter = query || "/* Paste or import SentinelOne STAR logic to generate a Cortex XQL filter. */";
 
   if (extracted.sourceFormat === "SentinelOne JSON") {
@@ -1124,8 +1495,8 @@ function translateToCortex(item, classification, extracted, s1ql) {
     });
   }
 
-  filter = replaceBinaryOperators(filter, { issues, fieldMap, conditionMap, seenFields });
-  filter = replaceEmptyOperators(filter, { issues, fieldMap, conditionMap, seenFields });
+  filter = replaceBinaryOperators(filter, translationContext);
+  filter = replaceEmptyOperators(filter, translationContext);
   filter = replaceLogicalOperators(filter);
   filter = replaceKnownPhrases(filter, issues);
   filter = normalizeWhitespaceOutsideStrings(filter);
@@ -1311,8 +1682,14 @@ function replaceKnownPhrases(input, issues) {
 }
 
 function translateCondition(sourceField, cortexField, operator, rawValue, issues) {
-  if (sourceField.toLowerCase() === "eventtype") {
+  const fieldKey = normalizeFieldKey(sourceField);
+
+  if (fieldKey === "eventtype") {
     return translateEventTypeCondition(operator, rawValue, issues);
+  }
+
+  if (fieldKey === "objecttype") {
+    return translateObjectTypeCondition(operator, rawValue, issues);
   }
 
   const value = normalizeValue(rawValue);
@@ -1363,9 +1740,48 @@ function translateEventTypeCondition(operator, rawValue, issues) {
   return `event_type ${operator} ${mappedValues[0]}`;
 }
 
+function translateObjectTypeCondition(operator, rawValue, issues) {
+  const normalizedValues = parseListItems(rawValue).map((value) => value.toLowerCase());
+  const objectTypeMappings = {
+    process: "ENUM.PROCESS",
+    file: "ENUM.FILE",
+    registry: "ENUM.REGISTRY",
+    registrykey: "ENUM.REGISTRY",
+    registryvalue: "ENUM.REGISTRY",
+    network: "ENUM.NETWORK",
+    dns: "ENUM.NETWORK",
+    module: "ENUM.LOAD_IMAGE",
+    moduleload: "ENUM.LOAD_IMAGE",
+    ip: "ENUM.NETWORK",
+    url: "ENUM.NETWORK"
+  };
+  const mappedValues = normalizedValues
+    .map((value) => objectTypeMappings[normalizeFieldAliasKey(value)])
+    .filter(Boolean);
+
+  if (!mappedValues.length) {
+    issues.push({
+      level: "Medium",
+      text: `Unknown ObjectType value ${rawValue}. Keep event_type placeholder and verify the Cortex event family.`
+    });
+    return `event_type ${operator} ${normalizeValue(rawValue)}`;
+  }
+
+  if (operator === "in" || operator === "not in") {
+    return `event_type ${operator} (${unique(mappedValues).join(", ")})`;
+  }
+
+  if (mappedValues.length > 1) {
+    return `event_type in (${unique(mappedValues).join(", ")})`;
+  }
+
+  return `event_type ${operator} ${mappedValues[0]}`;
+}
+
 function mapField(rawField, context) {
-  const key = rawField.toLowerCase();
-  const mapped = fieldMappings[key] || {
+  const key = normalizeFieldKey(rawField);
+  const contextual = contextualFieldMapping(key, context);
+  const mapped = contextual || fieldMappings[key] || {
     cortex: rawField,
     confidence: "Low",
     notes: "No built-in field mapping. Verify the correct Cortex dataset and field before production use."
@@ -1392,14 +1808,154 @@ function mapField(rawField, context) {
   return mapped;
 }
 
+function contextualFieldMapping(key, context) {
+  const objectType = context.objectTypeHint;
+  if (!objectType) return null;
+
+  if (key === "objectname") {
+    if (objectType === "file") {
+      return {
+        cortex: "action_file_name",
+        label: "Object name",
+        confidence: "High",
+        notes: "Contextual mapping from ObjectType=File to Cortex action_file_name."
+      };
+    }
+    if (objectType === "registry") {
+      return {
+        cortex: "action_registry_key_name",
+        label: "Object name",
+        confidence: "Medium",
+        notes: "Contextual mapping from ObjectType=Registry to Cortex registry key name; validate key/value semantics."
+      };
+    }
+    if (objectType === "network") {
+      return {
+        cortex: "action_external_hostname",
+        label: "Object name",
+        confidence: "Medium",
+        notes: "Contextual mapping from ObjectType=Network to hostname; validate IP, domain, and URL directionality."
+      };
+    }
+    if (objectType === "module") {
+      return {
+        cortex: "action_module_name",
+        label: "Object name",
+        confidence: "Medium",
+        notes: "Contextual mapping from ObjectType=Module to loaded module name; validate module telemetry availability."
+      };
+    }
+  }
+
+  if (key === "objectpath") {
+    if (objectType === "process") {
+      return {
+        cortex: "action_process_image_path",
+        label: "Object path",
+        confidence: "High",
+        notes: "Contextual mapping from ObjectType=Process to Cortex action process image path."
+      };
+    }
+    if (objectType === "file") {
+      return {
+        cortex: "action_file_path",
+        label: "Object path",
+        confidence: "High",
+        notes: "Contextual mapping from ObjectType=File to Cortex action file path."
+      };
+    }
+    if (objectType === "registry") {
+      return {
+        cortex: "action_registry_key_name",
+        label: "Object path",
+        confidence: "High",
+        notes: "Contextual mapping from ObjectType=Registry to Cortex registry key name."
+      };
+    }
+    if (objectType === "network") {
+      return {
+        cortex: "action_url",
+        label: "Object path",
+        confidence: "Medium",
+        notes: "Contextual mapping from ObjectType=Network to URL; validate whether the source value is a URL, host, or IP."
+      };
+    }
+    if (objectType === "module") {
+      return {
+        cortex: "action_module_path",
+        label: "Object path",
+        confidence: "Medium",
+        notes: "Contextual mapping from ObjectType=Module to loaded module path; validate module telemetry availability."
+      };
+    }
+  }
+
+  if (key === "objecthash") {
+    if (objectType === "process") {
+      return {
+        cortex: "action_process_image_sha256",
+        label: "Object hash",
+        confidence: "Medium",
+        notes: "Contextual mapping from ObjectType=Process to action process SHA-256; verify hash algorithm."
+      };
+    }
+    if (objectType === "file") {
+      return {
+        cortex: "action_file_sha256",
+        label: "Object hash",
+        confidence: "Medium",
+        notes: "Contextual mapping from ObjectType=File to action file SHA-256; verify hash algorithm."
+      };
+    }
+    if (objectType === "module") {
+      return {
+        cortex: "action_module_sha256",
+        label: "Object hash",
+        confidence: "Medium",
+        notes: "Contextual mapping from ObjectType=Module to loaded module SHA-256; verify hash algorithm and telemetry availability."
+      };
+    }
+  }
+
+  return null;
+}
+
+function inferObjectTypeHint(query) {
+  const conditions = extractS1qlConditions(query);
+  const objectTypeCondition = conditions.find((condition) => normalizeFieldKey(condition.field) === "objecttype");
+  if (!objectTypeCondition) return "";
+
+  const values = parseListItems(objectTypeCondition.value).map((value) => normalizeFieldAliasKey(value));
+  const first = values[0] || "";
+  if (/process/.test(first)) return "process";
+  if (/file/.test(first)) return "file";
+  if (/registr/.test(first)) return "registry";
+  if (/network|dns|ip|url/.test(first)) return "network";
+  if (/module|loadimage/.test(first)) return "module";
+  return "";
+}
+
+function normalizeFieldKey(rawField) {
+  const aliasKey = normalizeFieldAliasKey(rawField);
+  return fieldAliases[aliasKey] || aliasKey;
+}
+
+function normalizeFieldAliasKey(rawField) {
+  return String(rawField || "")
+    .toLowerCase()
+    .replace(/[`"']/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
 function discoverUnmappedFields(query, fieldMap, issues, seenFields) {
   const candidatePattern = /\b([A-Z][A-Za-z0-9_]{2,})\b(?=\s*(?:=|!=|>=|<=|>|<|\bin\b|\bcontains\b|\bmatches\b|\bis\b))/g;
   let match;
 
   while ((match = candidatePattern.exec(query))) {
     const rawField = match[1];
-    const key = rawField.toLowerCase();
+    const key = normalizeFieldKey(rawField);
     if (seenFields.has(key)) continue;
+    if (fieldMappings[key]) continue;
     seenFields.add(key);
     fieldMap.push({
       source: rawField,
@@ -1522,6 +2078,124 @@ function normalizeRuleSpacing(value) {
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
     .trim();
+}
+
+function normalizeKnownFieldPhrases(value) {
+  let output = String(value || "");
+  const phraseFields = [
+    ["Object Type", "ObjectType"],
+    ["Object Name", "ObjectName"],
+    ["Object Path", "ObjectPath"],
+    ["Object Full Path", "ObjectPath"],
+    ["Object Hash", "ObjectHash"],
+    ["Object SHA256", "ObjectSHA256"],
+    ["Object SHA1", "ObjectSHA1"],
+    ["Object MD5", "ObjectMD5"],
+    ["Event Type", "EventType"],
+    ["Event Name", "EventName"],
+    ["Event Subtype", "EventSubtype"],
+    ["Event Sub Type", "EventSubtype"],
+    ["Event Time", "EventTime"],
+    ["Event ID", "EventID"],
+    ["Process Name", "ProcessName"],
+    ["Process ID", "ProcessID"],
+    ["Process Command Line", "ProcessCommandLine"],
+    ["Process CmdLine", "ProcessCmdLine"],
+    ["Process Path", "ProcessPath"],
+    ["Process User", "ProcessUser"],
+    ["Process Integrity Level", "ProcessIntegrityLevel"],
+    ["Integrity Level", "IntegrityLevel"],
+    ["Parent Process Name", "ParentProcessName"],
+    ["Parent Process Command Line", "ParentProcessCmdLine"],
+    ["Parent Process CmdLine", "ParentProcessCmdLine"],
+    ["Parent Process Path", "ParentProcessPath"],
+    ["Parent Process ID", "ParentProcessID"],
+    ["Parent PID", "ParentPID"],
+    ["File Name", "FileName"],
+    ["File Path", "FilePath"],
+    ["File Full Path", "FileFullPath"],
+    ["File Extension", "FileExtension"],
+    ["File Hash", "FileHash"],
+    ["File Size", "FileSize"],
+    ["File Type", "FileType"],
+    ["Old File Path", "OldFilePath"],
+    ["New File Path", "NewFilePath"],
+    ["Old File Name", "OldFileName"],
+    ["New File Name", "NewFileName"],
+    ["Registry Key Path", "RegistryKeyPath"],
+    ["Registry Path", "RegistryPath"],
+    ["Registry Key", "RegistryKey"],
+    ["Registry Value Name", "RegistryValueName"],
+    ["Registry Value Data", "RegistryValueData"],
+    ["Registry Value Path", "RegistryValuePath"],
+    ["Registry Value", "RegistryValue"],
+    ["Registry Data", "RegistryData"],
+    ["Destination IP", "DestinationIP"],
+    ["Destination Port", "DestinationPort"],
+    ["Destination Hostname", "DestinationHostname"],
+    ["Destination Host Name", "DestinationHostname"],
+    ["Remote IP", "RemoteIP"],
+    ["Remote Port", "RemotePort"],
+    ["Remote Hostname", "RemoteHostname"],
+    ["Remote Host Name", "RemoteHostname"],
+    ["Source IP", "SourceIP"],
+    ["Source Port", "SourcePort"],
+    ["Source IP Address", "SourceIPAddress"],
+    ["IP Address", "IPAddress"],
+    ["Network Protocol", "NetworkProtocol"],
+    ["DNS Request", "DNSRequest"],
+    ["DNS Query", "DNSQuery"],
+    ["DNS Response", "DNSResponse"],
+    ["Request URL", "RequestURL"],
+    ["Target URL", "TargetURL"],
+    ["URL Host", "URLHost"],
+    ["Account Name", "AccountName"],
+    ["User Principal Name", "UserPrincipalName"],
+    ["Login User", "LoginUser"],
+    ["OS Username", "OSUsername"],
+    ["OS User Name", "OSUsername"],
+    ["Domain User", "DomainUser"],
+    ["User Domain", "UserDomain"],
+    ["Agent ID", "AgentID"],
+    ["Agent UUID", "AgentUUID"],
+    ["Agent Version", "AgentVersion"],
+    ["Agent OS Type", "AgentOSType"],
+    ["Agent OS", "AgentOS"],
+    ["Agent Hostname", "AgentHostname"],
+    ["Agent Host Name", "AgentHostname"],
+    ["Endpoint ID", "EndpointID"],
+    ["Endpoint Name", "EndpointName"],
+    ["Endpoint Type", "EndpointType"],
+    ["Endpoint OS", "EndpointOS"],
+    ["Computer Name", "ComputerName"],
+    ["Machine ID", "MachineID"],
+    ["Site Name", "SiteName"],
+    ["Site ID", "SiteID"],
+    ["Group Name", "GroupName"],
+    ["Group ID", "GroupID"],
+    ["Signer Identity", "SignerIdentity"],
+    ["Signed Status", "SignedStatus"],
+    ["Signature Status", "SignatureStatus"],
+    ["Threat Name", "ThreatName"],
+    ["Threat ID", "ThreatID"],
+    ["Detection Name", "DetectionName"],
+    ["Analyst Verdict", "AnalystVerdict"],
+    ["Confidence Level", "ConfidenceLevel"],
+    ["Rule Name", "RuleName"],
+    ["Rule ID", "RuleID"],
+    ["Module Name", "ModuleName"],
+    ["Module Path", "ModulePath"],
+    ["Module SHA256", "ModuleSHA256"]
+  ];
+
+  phraseFields
+    .sort((left, right) => right[0].length - left[0].length)
+    .forEach(([phrase, canonical]) => {
+    const pattern = new RegExp(`\\b${phrase.replace(/\s+/g, "\\s+")}\\b`, "gi");
+    output = output.replace(pattern, canonical);
+  });
+
+  return output;
 }
 
 function normalizeWhitespaceOutsideStrings(value) {

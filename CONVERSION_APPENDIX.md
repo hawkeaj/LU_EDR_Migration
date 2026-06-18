@@ -365,7 +365,46 @@ AND, OR, NOT
 
 ## 12. Field Mapping Dictionary
 
-The utility maps known SentinelOne fields to Cortex-style fields. Unknown fields are preserved as-is and marked `Low` confidence.
+The utility maps known SentinelOne/S1QL fields to Cortex-style fields through a normalized registry. Field names are normalized before lookup, so casing, spaces, underscores, hyphens, and dotted variants are treated as the same field where the meaning is equivalent. For example:
+
+```text
+ObjectType, object_type, Object Type, object.type
+```
+
+all normalize to the `objecttype` mapping.
+
+Unknown fields are preserved as-is and marked `Low` confidence, but they are no longer treated as syntax errors simply because the local Cortex mapping registry does not know them. This keeps the distinction clear:
+
+- S1QL syntax validation checks whether the query shape is usable.
+- Field mapping checks whether the migration utility knows a Cortex target field.
+- Manual review flags identify tenant-schema or semantic ambiguity.
+
+### High-Fidelity Field Categories
+
+The local registry covers these SentinelOne/S1QL field families:
+
+| Category | SentinelOne/S1QL examples | Cortex mapping behavior |
+|---|---|---|
+| Event metadata | `EventType`, `EventSubType`, `EventName`, `EventId`, `EventTime`, `Timestamp`, `CreatedAt`, `UpdatedAt` | Maps to Cortex event type/name/time fields where a close endpoint telemetry field exists |
+| Generic object fields | `ObjectType`, `ObjectName`, `ObjectPath`, `ObjectHash`, `ObjectSHA256`, `ObjectSHA1`, `ObjectMD5` | Uses `ObjectType` context to map generic object fields into process, file, registry, network, or module fields |
+| Target process | `TgtProcName`, `TgtProcImageName`, `TgtProcCmdLine`, `TgtProcPath`, `TgtProcPid` | Maps to `action_process_*` fields |
+| Source or parent process | `SrcProcName`, `SrcProcImageName`, `SrcProcCmdLine`, `SrcProcPath`, `ParentProcessName`, `ParentProcessCmdLine`, `ParentPid` | Maps to `actor_process_*` fields |
+| Generic process | `ProcessName`, `ProcessCommandLine`, `ProcessCmdLine`, `ProcessPath`, `ProcessId`, `Pid`, `ProcessUser`, `IntegrityLevel` | Maps to action process fields unless the source explicitly indicates parent/source semantics |
+| Process trust and signer | `Signer`, `SignerIdentity`, `SignedStatus`, `SignatureStatus`, `Publisher`, `Certificate` | Maps to Cortex signer/signature/publisher-style fields when available; some remain medium confidence because tenant telemetry varies |
+| File | `FilePath`, `FileFullPath`, `TgtFilePath`, `SrcFilePath`, `FileName`, `FileExtension`, `FileHash`, `FileSize`, `FileType`, `OldFilePath`, `NewFilePath` | Maps to action file fields or actor process path when SentinelOne source semantics imply an actor file |
+| Hashes | `sha256`, `sha1`, `md5`, `ObjectSHA256`, `ObjectSHA1`, `ObjectMD5`, `ModuleSHA256` | Maps to the corresponding Cortex hash field |
+| Registry | `RegistryKeyPath`, `RegistryPath`, `RegistryKey`, `RegistryKeyName`, `RegistryValue`, `RegistryValueName`, `RegistryValueData`, `RegistryData` | Maps to Cortex registry key, value name, or value data fields |
+| Network | `DstIP`, `DestinationIP`, `RemoteIP`, `SrcIP`, `SourceIP`, `DstPort`, `DestinationPort`, `RemotePort`, `SourcePort`, `Protocol`, `NetworkProtocol` | Maps to remote/source IP and port fields with directionality notes where ambiguous |
+| DNS, URL, and host | `Domain`, `DnsRequest`, `DnsQuery`, `DnsResponse`, `DstHostName`, `DestinationHostName`, `RemoteHostName`, `Url`, `RequestUrl`, `TargetUrl`, `UrlHost` | Maps to external hostname or URL fields depending on source field |
+| Identity | `UserName`, `User`, `AccountName`, `UserPrincipalName`, `LoginUser`, `OsUserName`, `DomainUser`, `UserDomain` | Maps to actor effective username/domain fields |
+| Endpoint and agent | `EndpointName`, `HostName`, `AgentId`, `AgentUUID`, `AgentVersion`, `AgentOS`, `AgentOSType`, `AgentHostName`, `EndpointId`, `EndpointType`, `ComputerName`, `MachineId` | Maps to Cortex agent/endpoint fields |
+| Site and group scope | `SiteName`, `SiteId`, `Site`, `GroupName`, `GroupId` | Preserved as low or medium confidence because S1 site/group scoping often becomes deployment scope, endpoint group, tag, or policy design rather than a direct event predicate |
+| Module loads | `ModuleName`, `ModulePath`, `ModuleSHA256` | Maps to module/load-image fields where available |
+| Threat and rule metadata | `ThreatName`, `ThreatId`, `DetectionName`, `RuleName`, `RuleId`, `AnalystVerdict`, `ConfidenceLevel` | Maps to detection/threat metadata fields when available, otherwise remains a review flag |
+
+### Representative Field Mappings
+
+The table below lists the most important mappings explicitly. The running app contains the full local registry used by validation, translation, field-map output, and export.
 
 | SentinelOne field | Cortex field | Confidence | Notes |
 |---|---|---|---|
@@ -402,8 +441,83 @@ The utility maps known SentinelOne fields to Cortex-style fields. Unknown fields
 | `HostName` | `agent_hostname` | High | Cortex agent hostname |
 | `SiteName` | `agent_installation_package` | Low | S1 site scoping usually maps better to tenant/group/tag controls |
 | `OS` | `agent_os_type` | High | Endpoint operating system |
+| `ObjectType` | `event_type` | High | Semantic mapping to Cortex event enum when recognized |
+| `ObjectName` | Contextual | Medium | Maps to process image name, file name, registry key/value, external hostname, or module name depending on `ObjectType` |
+| `ObjectPath` | Contextual | Medium | Maps to process image path, file path, registry key name, URL, or module path depending on `ObjectType` |
+| `ObjectHash` | Contextual | Medium | Maps to process, file, or module SHA-256 when context is known; otherwise defaults to file SHA-256 |
+| `ObjectSHA256` | `action_file_sha256` | High | SHA-256 for a file or process object; context can adjust this |
+| `ObjectSHA1` | `action_file_sha1` | High | SHA-1 for a file or process object |
+| `ObjectMD5` | `action_file_md5` | High | MD5 for a file or process object |
+| `ProcessName` | `action_process_image_name` | High | Generic process name |
+| `ProcessCmdLine` | `action_process_image_command_line` | High | Generic process command line |
+| `ProcessCommandLine` | `action_process_image_command_line` | High | Generic process command line |
+| `ProcessPath` | `action_process_image_path` | High | Generic process path |
+| `ProcessId` | `action_process_instance_id` | Medium | Cortex process instance identifier availability varies by tenant/event |
+| `Pid` | `action_process_instance_id` | Medium | Process identifier |
+| `ParentProcessName` | `actor_process_image_name` | High | Parent process name |
+| `ParentProcessCmdLine` | `actor_process_command_line` | High | Parent process command line |
+| `ParentProcessPath` | `actor_process_image_path` | High | Parent process path |
+| `ParentPid` | `actor_process_instance_id` | Medium | Parent process identifier |
+| `FileName` | `action_file_name` | High | File name |
+| `FileExtension` | `action_file_extension` | Medium | File extension availability should be validated against tenant telemetry |
+| `FileSize` | `action_file_size` | Medium | File size |
+| `FileType` | `action_file_type` | Medium | File type or classification |
+| `OldFilePath` | `action_file_path` | Low | Rename/move events may need old/new path-specific fields; validate event family |
+| `NewFilePath` | `action_file_path` | Medium | Rename/move destination path |
+| `RegistryPath` | `action_registry_key_name` | High | Registry key path |
+| `RegistryKey` | `action_registry_key_name` | High | Registry key path |
+| `RegistryValueName` | `action_registry_value_name` | Medium | Registry value name |
+| `RegistryData` | `action_registry_data` | Medium | Registry value data |
+| `DestinationIP` | `action_remote_ip` | High | Destination IP |
+| `DestinationPort` | `action_remote_port` | High | Destination port |
+| `RemoteIP` | `action_remote_ip` | High | Remote IP |
+| `RemotePort` | `action_remote_port` | High | Remote port |
+| `SourceIP` | `actor_remote_ip` | Low | Directionality must be validated for endpoint telemetry |
+| `SourcePort` | `actor_remote_port` | Low | Directionality must be validated for endpoint telemetry |
+| `DnsRequest` | `action_external_hostname` | Medium | DNS request hostname |
+| `DnsQuery` | `action_external_hostname` | Medium | DNS query hostname |
+| `RequestUrl` | `action_url` | Medium | Requested URL |
+| `TargetUrl` | `action_url` | Medium | Target URL |
+| `UrlHost` | `action_external_hostname` | Medium | URL host |
+| `AccountName` | `actor_effective_username` | High | Account or user context |
+| `UserPrincipalName` | `actor_effective_username` | Medium | UPN identity |
+| `UserDomain` | `actor_effective_domain` | Medium | User domain |
+| `AgentId` | `agent_id` | Medium | Cortex agent identifier |
+| `AgentUUID` | `agent_id` | Medium | Cortex agent identifier |
+| `AgentVersion` | `agent_version` | Medium | Agent version |
+| `AgentOSType` | `agent_os_type` | High | Agent operating system type |
+| `ComputerName` | `agent_hostname` | High | Endpoint hostname |
+| `GroupName` | `agent_installation_package` | Low | Usually better handled as endpoint group, tag, or policy scope |
+| `ModuleName` | `action_module_name` | Medium | Loaded module name |
+| `ModulePath` | `action_module_path` | Medium | Loaded module path |
+| `ModuleSHA256` | `action_module_sha256` | Medium | Loaded module SHA-256 |
+| `ThreatName` | `causality_actor_process_image_name` | Low | Threat metadata is not raw endpoint telemetry; validate Cortex alert dataset usage |
+| `DetectionName` | `event_sub_type` | Low | Detection metadata is a review placeholder unless alert datasets are used |
+| `RuleName` | `event_sub_type` | Low | Source rule metadata is a review placeholder unless alert datasets are used |
 
-## 13. Event Type Mapping
+### Generic Object Context Mapping
+
+SentinelOne STAR/S1QL rules frequently use generic object fields. The converter now treats these as semantic fields, not literal one-to-one strings. When `ObjectType` is present in the same query, it changes how `ObjectName`, `ObjectPath`, and `ObjectHash` are mapped:
+
+| ObjectType context | Generic source field | Cortex field |
+|---|---|---|
+| `Process` | `ObjectName` | `action_process_image_name` |
+| `Process` | `ObjectPath` | `action_process_image_path` |
+| `Process` | `ObjectHash` | `action_process_image_sha256` |
+| `File` | `ObjectName` | `action_file_name` |
+| `File` | `ObjectPath` | `action_file_path` |
+| `File` | `ObjectHash` | `action_file_sha256` |
+| `Registry`, `RegistryKey`, `RegistryValue` | `ObjectName` | `action_registry_key_name` |
+| `Registry`, `RegistryKey`, `RegistryValue` | `ObjectPath` | `action_registry_key_name` |
+| `Network`, `DNS`, `IP`, `URL` | `ObjectName` | `action_external_hostname` |
+| `Network`, `DNS`, `IP`, `URL` | `ObjectPath` | `action_url` |
+| `Module`, `ModuleLoad` | `ObjectName` | `action_module_name` |
+| `Module`, `ModuleLoad` | `ObjectPath` | `action_module_path` |
+| `Module`, `ModuleLoad` | `ObjectHash` | `action_module_sha256` |
+
+## 13. Event and Object Type Mapping
+
+`EventType` and `ObjectType` both influence Cortex event selection. `EventType` is treated as the explicit event family when present. `ObjectType` is treated as a semantic object family and is translated to `event_type` when it clearly identifies a Cortex event class.
 
 | SentinelOne EventType value | Cortex value |
 |---|---|
@@ -421,6 +535,20 @@ The utility maps known SentinelOne fields to Cortex-style fields. Unknown fields
 | `DNS` | `ENUM.NETWORK` |
 | `Module` | `ENUM.LOAD_IMAGE` |
 | `Module Load` | `ENUM.LOAD_IMAGE` |
+
+| SentinelOne ObjectType value | Cortex value |
+|---|---|
+| `Process` | `ENUM.PROCESS` |
+| `File` | `ENUM.FILE` |
+| `Registry` | `ENUM.REGISTRY` |
+| `RegistryKey` | `ENUM.REGISTRY` |
+| `RegistryValue` | `ENUM.REGISTRY` |
+| `Network` | `ENUM.NETWORK` |
+| `DNS` | `ENUM.NETWORK` |
+| `IP` | `ENUM.NETWORK` |
+| `URL` | `ENUM.NETWORK` |
+| `Module` | `ENUM.LOAD_IMAGE` |
+| `ModuleLoad` | `ENUM.LOAD_IMAGE` |
 
 Unknown event types are preserved as `event_type <operator> <value>` and flagged for manual review.
 
@@ -789,7 +917,7 @@ The utility does not yet:
 - Query the Cortex schema from a tenant.
 - Query SentinelOne APIs directly.
 - Guarantee official Cortex XQL syntax for every operator.
-- Convert every possible STAR export field.
+- Guarantee exhaustive coverage of every SentinelOne export or tenant-specific field name. The registry covers common STAR/S1QL endpoint fields and preserves unknown fields for analyst review.
 - Preserve nested boolean precedence beyond the text-level rewrite.
 - Generate production-ready correlation schedules.
 - Generate Cortex playbooks or automated response actions.
