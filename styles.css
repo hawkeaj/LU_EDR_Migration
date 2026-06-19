@@ -1,9 +1,9 @@
 :root {
   color-scheme: light;
-  --bg: #f2f4f7;
+  --bg: #f5f7fa;
   --surface: #ffffff;
-  --surface-2: #f7f9fc;
-  --surface-3: #edf7f3;
+  --surface-2: #f8fafc;
+  --surface-3: #f1f7f5;
   --text: #172033;
   --muted: #617087;
   --line: #d5dde8;
@@ -13,7 +13,7 @@
   --amber: #9a5b00;
   --bad: #b42335;
   --ink: #111827;
-  --shadow: 0 16px 36px rgba(32, 45, 70, 0.1);
+  --shadow: 0 10px 26px rgba(32, 45, 70, 0.08);
   --radius: 8px;
 }
 
@@ -24,9 +24,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 244, 247, 0.88) 260px),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
   font-family: Inter, "Segoe UI", Arial, sans-serif;
   font-size: 15px;
@@ -75,9 +73,9 @@ button.quiet:hover {
 }
 
 .shell {
-  width: min(1540px, 100%);
+  width: min(1480px, 100%);
   margin: 0 auto;
-  padding: 28px;
+  padding: 22px;
 }
 
 .masthead,
@@ -92,9 +90,9 @@ button.quiet:hover {
 .masthead {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 22px;
-  align-items: end;
-  padding: 28px;
+  gap: 18px;
+  align-items: center;
+  padding: 22px;
 }
 
 .eyebrow {
@@ -122,8 +120,8 @@ h3 {
 
 h1 {
   max-width: 900px;
-  margin-bottom: 12px;
-  font-size: clamp(2rem, 4vw, 3.7rem);
+  margin-bottom: 10px;
+  font-size: clamp(1.9rem, 2.6vw, 2.75rem);
 }
 
 h2 {
@@ -140,7 +138,7 @@ h3 {
   max-width: 920px;
   margin-bottom: 0;
   color: var(--muted);
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 .header-actions,
@@ -178,12 +176,12 @@ h3 {
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
-  margin: 18px 0;
+  gap: 12px;
+  margin: 16px 0;
 }
 
 .metric-card {
-  padding: 18px;
+  padding: 15px;
 }
 
 .metric-card small {
@@ -194,9 +192,9 @@ h3 {
 
 .metric-card span {
   display: block;
-  margin: 7px 0 4px;
+  margin: 5px 0 3px;
   color: var(--teal);
-  font-size: 2rem;
+  font-size: 1.7rem;
   font-weight: 850;
 }
 
@@ -208,14 +206,14 @@ h3 {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(430px, 0.9fr) minmax(560px, 1.1fr);
+  grid-template-columns: minmax(420px, 0.85fr) minmax(620px, 1.15fr);
   gap: 18px;
   align-items: start;
   margin-bottom: 18px;
 }
 
 .panel {
-  padding: 20px;
+  padding: 18px;
 }
 
 label {
@@ -238,7 +236,7 @@ textarea {
 }
 
 textarea {
-  min-height: 260px;
+  min-height: 300px;
   resize: vertical;
   font-family: "Cascadia Code", Consolas, monospace;
   font-size: 0.88rem;
@@ -331,8 +329,8 @@ button:focus-visible,
 }
 
 #xql-preview {
-  min-height: 220px;
-  max-height: 410px;
+  min-height: 240px;
+  max-height: 360px;
   overflow: auto;
   margin: 0;
   color: #e5e7eb;
@@ -344,8 +342,8 @@ button:focus-visible,
 
 .preview-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   margin-top: 14px;
 }
 
@@ -355,8 +353,14 @@ button:focus-visible,
 .detail-box {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface-2);
+  background: var(--surface);
   padding: 14px;
+}
+
+.preview-grid article:first-child,
+.preview-grid article:nth-child(4),
+.preview-grid article:last-child {
+  grid-column: 1 / -1;
 }
 
 .preview-grid ul,
@@ -375,12 +379,12 @@ button:focus-visible,
 
 .mapping-panel {
   margin-top: 14px;
-  background: var(--surface-3);
+  background: var(--surface);
 }
 
 .mapping-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -389,6 +393,7 @@ button:focus-visible,
   border-radius: var(--radius);
   background: #ffffff;
   padding: 11px;
+  min-width: 0;
 }
 
 .mapping-card strong {
@@ -429,6 +434,7 @@ button:focus-visible,
   border-radius: var(--radius);
   background: #ffffff;
   padding: 11px;
+  min-width: 0;
 }
 
 .component-card {
@@ -440,6 +446,7 @@ button:focus-visible,
   border-radius: var(--radius);
   background: #ffffff;
   padding: 11px;
+  min-width: 0;
 }
 
 .mitre-card strong,
@@ -461,6 +468,10 @@ button:focus-visible,
   margin: 6px 0 0;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.compact-card p {
+  display: none;
 }
 
 .mitre-section-label {
@@ -549,13 +560,13 @@ button:focus-visible,
 
 table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 1280px;
   border-collapse: collapse;
 }
 
 th,
 td {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
@@ -632,7 +643,7 @@ tbody tr:hover {
 .details-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
 }
 
 .assessment-columns {

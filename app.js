@@ -62,6 +62,24 @@ const fieldMappings = {
     confidence: "High",
     notes: "The parent or actor process path."
   },
+  srcprocparentname: {
+    cortex: "causality_actor_process_image_name",
+    label: "Source process parent name",
+    confidence: "Medium",
+    notes: "Parent of the SentinelOne source process; validate whether Cortex actor or causality actor best matches the tenant event."
+  },
+  srcprocparentcmdline: {
+    cortex: "causality_actor_process_command_line",
+    label: "Source process parent command line",
+    confidence: "Medium",
+    notes: "Parent command line for the SentinelOne source process; validate causality chain semantics in Cortex."
+  },
+  srcprocparentpath: {
+    cortex: "causality_actor_process_image_path",
+    label: "Source process parent path",
+    confidence: "Medium",
+    notes: "Parent path for the SentinelOne source process; validate causality chain semantics in Cortex."
+  },
   filepath: {
     cortex: "action_file_path",
     label: "File path",
@@ -840,7 +858,7 @@ const mitreDataComponentRules = [
     name: "Container Creation",
     domain: "Containers",
     url: "https://attack.mitre.org/datacomponents/DC0072/",
-    fields: /container|image|docker/i,
+    fields: /container|docker|kubernetes|k8s|namespace|pod/i,
     keywords: /docker run|container creation|new container|container image/i,
     rationale: "The rule references container creation or image execution."
   }
@@ -861,6 +879,9 @@ const s1qlKnownFieldNames = new Set([
   "tgtprocpath",
   "srcprocname",
   "srcproccmdline",
+  "srcprocparentname",
+  "srcprocparentcmdline",
+  "srcprocparentpath",
   "registrykeypath",
   "dstip",
   "dstport",
@@ -894,6 +915,13 @@ const fieldAliases = {
   sourceprocessname: "srcprocname",
   sourceprocesscmdline: "srcproccmdline",
   sourceprocesspath: "srcprocpath",
+  sourceprocessparentname: "srcprocparentname",
+  sourceprocessparentcmdline: "srcprocparentcmdline",
+  sourceprocessparentcommandline: "srcprocparentcmdline",
+  sourceprocessparentpath: "srcprocparentpath",
+  srcparentprocname: "srcprocparentname",
+  srcparentproccmdline: "srcprocparentcmdline",
+  srcparentprocpath: "srcprocparentpath",
   processcommandline: "processcommandline",
   commandline: "processcmdline",
   cmdline: "processcmdline",
@@ -1509,23 +1537,96 @@ function summarizeS1qlStatus(status, requestedVersion, detectedVersion) {
 
 function extractS1qlConditions(query) {
   const conditions = [];
-  const normalizedQuery = normalizeKnownFieldPhrases(query);
-  const operatorPattern = /(is\s+not\s+empty|is\s+empty|not\s+contains|starts\s+with|ends\s+with|not\s+in|contains|matches|regexp|in|!=|>=|<=|=|>|<)/i;
-  const valuePattern = /(?!(?:AND|OR|NOT)\b)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^()"']+|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')*\)|[^\s)]+)/;
-  const conditionPattern = new RegExp(`\\b([A-Za-z][A-Za-z0-9_]*)\\b\\s+${operatorPattern.source}(?:\\s+${valuePattern.source})?`, "gi");
+  const normalizedQuery = normalizeS1qlConsolePaste(normalizeKnownFieldPhrases(query));
+  const operatorPattern = /(is\s+not\s+empty|is\s+empty|not\s+contains|starts\s+with|ends\s+with|not\s+in|contains|matches|regexp|in|!=|>=|<=|=|>|<)(?=\s|\(|\[|"|'|$)/i;
+  const conditionPattern = new RegExp(`\\b([A-Za-z][A-Za-z0-9_]*)\\b\\s+${operatorPattern.source}`, "gi");
   let match;
 
   while ((match = conditionPattern.exec(normalizedQuery))) {
+    const operator = match[2].replace(/\s+/g, " ");
+    const parsedValue = readS1qlConditionValue(normalizedQuery, conditionPattern.lastIndex, operator);
     conditions.push({
       field: match[1],
-      operator: match[2].replace(/\s+/g, " "),
-      value: match[3] || "",
+      operator,
+      value: parsedValue.value,
       start: match.index,
-      end: conditionPattern.lastIndex
+      end: parsedValue.end
     });
+    conditionPattern.lastIndex = Math.max(parsedValue.end, conditionPattern.lastIndex);
   }
 
   return conditions;
+}
+
+function readS1qlConditionValue(query, startIndex, operator) {
+  if (operator === "is empty" || operator === "is not empty") {
+    return { value: "", end: startIndex };
+  }
+
+  let index = startIndex;
+  while (/\s/.test(query[index] || "")) index += 1;
+  const valueStart = index;
+  const opener = query[index];
+
+  if (opener === '"' || opener === "'") {
+    const quoteChar = opener;
+    index += 1;
+    let escaped = false;
+    while (index < query.length) {
+      const char = query[index];
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quoteChar) {
+        index += 1;
+        break;
+      }
+      index += 1;
+    }
+    return { value: query.slice(valueStart, index).trim(), end: index };
+  }
+
+  if (opener === "(" || opener === "[") {
+    const closer = opener === "(" ? ")" : "]";
+    let depth = 0;
+    let quoteChar = "";
+    let escaped = false;
+    while (index < query.length) {
+      const char = query[index];
+      if (quoteChar) {
+        if (escaped) {
+          escaped = false;
+        } else if (char === "\\") {
+          escaped = true;
+        } else if (char === quoteChar) {
+          quoteChar = "";
+        }
+      } else if (char === '"' || char === "'") {
+        quoteChar = char;
+      } else if (char === opener) {
+        depth += 1;
+      } else if (char === closer) {
+        depth -= 1;
+        if (depth === 0) {
+          index += 1;
+          break;
+        }
+      }
+      index += 1;
+    }
+    const raw = query.slice(valueStart, index).trim();
+    return { value: opener === "[" ? `(${raw.slice(1, -1)})` : raw, end: index };
+  }
+
+  while (index < query.length) {
+    const rest = query.slice(index);
+    if (/^\s+(AND|OR)\b/i.test(rest)) break;
+    if (query[index] === ")") break;
+    index += 1;
+  }
+
+  return { value: query.slice(valueStart, index).trim(), end: index };
 }
 
 function checkS1qlOrphanedFields(query, conditions, findings) {
@@ -1769,8 +1870,8 @@ function dedupeDataComponents(components) {
   });
 
   return [...byId.values()].sort((left, right) => {
-    if (left.domain !== right.domain) return left.domain.localeCompare(right.domain);
     if (rank[right.confidence] !== rank[left.confidence]) return rank[right.confidence] - rank[left.confidence];
+    if (left.domain !== right.domain) return left.domain.localeCompare(right.domain);
     return left.id.localeCompare(right.id);
   });
 }
@@ -2616,14 +2717,14 @@ function extractIndicators(value) {
 }
 
 function normalizeRuleSpacing(value) {
-  return String(value || "")
+  return normalizeS1qlConsolePaste(value)
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
     .trim();
 }
 
 function normalizeKnownFieldPhrases(value) {
-  let output = String(value || "");
+  let output = normalizeS1qlConsolePaste(value);
   const phraseFields = [
     ["Object Type", "ObjectType"],
     ["Object Name", "ObjectName"],
@@ -2653,6 +2754,14 @@ function normalizeKnownFieldPhrases(value) {
     ["Parent Process Path", "ParentProcessPath"],
     ["Parent Process ID", "ParentProcessID"],
     ["Parent PID", "ParentPID"],
+    ["Source Process Parent Command Line", "SrcProcParentCmdLine"],
+    ["Source Process Parent CmdLine", "SrcProcParentCmdLine"],
+    ["Source Process Parent Name", "SrcProcParentName"],
+    ["Source Process Parent Path", "SrcProcParentPath"],
+    ["Src Proc Parent Command Line", "SrcProcParentCmdLine"],
+    ["Src Proc Parent CmdLine", "SrcProcParentCmdLine"],
+    ["Src Proc Parent Name", "SrcProcParentName"],
+    ["Src Proc Parent Path", "SrcProcParentPath"],
     ["File Name", "FileName"],
     ["File Path", "FilePath"],
     ["File Full Path", "FileFullPath"],
@@ -2738,6 +2847,23 @@ function normalizeKnownFieldPhrases(value) {
   });
 
   return output;
+}
+
+function normalizeS1qlConsolePaste(value) {
+  return String(value || "")
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u200b\u200c\u200d\ufeff]/g, "")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[ \t]*\r?\n[ \t]*/g, " ")
+    .replace(/\bnot[\s_-]*in\b/gi, "not in")
+    .replace(/\bnot[\s_-]*contains\b/gi, "not contains")
+    .replace(/\bis[\s_-]*not[\s_-]*empty\b/gi, "is not empty")
+    .replace(/\bis[\s_-]*empty\b/gi, "is empty")
+    .replace(/\b(starts)[\s_-]*with\b/gi, "starts with")
+    .replace(/\b(ends)[\s_-]*with\b/gi, "ends with")
+    .replace(/\b(not\s+in|in)\s*\[([^\]]*)\]/gi, (_, operator, body) => `${operator} (${body})`)
+    .replace(/\b([A-Za-z][A-Za-z0-9_]*)\b\s+(not\s+in|in)\s+((?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^()\s,]+)\s*(?:,\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^()\s,]+)\s*)+)(?=\s+(?:AND|OR)\b|\s*\)|\s*$)/gi, (_match, field, operator, body) => `${field} ${operator} (${body.trim()})`);
 }
 
 function normalizeWhitespaceOutsideStrings(value) {
@@ -2889,7 +3015,7 @@ function renderTranslationPreview() {
     ? draft.translation.issues.map((issue) => `<li><strong>${escapeHtml(issue.level)}:</strong> ${escapeHtml(issue.text)}</li>`).join("")
     : `<li>No blocking translation gaps detected for this draft.</li>`;
 
-  mitrePreview.innerHTML = mitreHtml(draft.mitre);
+  mitrePreview.innerHTML = mitreSummaryHtml(draft.mitre);
   assessmentPreview.innerHTML = assessmentHtml(draft.assessment);
 }
 
@@ -3383,6 +3509,34 @@ function mitreHtml(mitre) {
     : `<p class="empty-note">${escapeHtml(mitre.notes[0] || "No deterministic ATT&CK technique match detected.")}</p>`;
 
   return componentHtml + techniqueHtml;
+}
+
+function mitreSummaryHtml(mitre) {
+  const components = (mitre.dataComponents || []).slice(0, 1);
+  const techniques = (mitre.matches || []).slice(0, 1);
+  const hiddenCount = Math.max(0, (mitre.dataComponents?.length || 0) + (mitre.matches?.length || 0) - components.length - techniques.length);
+
+  if (!components.length && !techniques.length) {
+    return `<p class="empty-note">${escapeHtml(mitre.notes[0] || "No ATT&CK correlation detected.")}</p>`;
+  }
+
+  return `
+    ${components.length ? `<div class="mitre-section-label">Data components</div>` : ""}
+    ${components.map((component) => `
+      <article class="mitre-card component-card compact-card">
+        <strong>${escapeHtml(component.id)} ${escapeHtml(component.name)}</strong>
+        <small>${escapeHtml(component.domain)} / ${escapeHtml(component.confidence)} confidence</small>
+      </article>
+    `).join("")}
+    ${techniques.length ? `<div class="mitre-section-label">Techniques</div>` : ""}
+    ${techniques.map((match) => `
+      <article class="mitre-card compact-card">
+        <strong>${escapeHtml(match.id)} ${escapeHtml(match.displayName)}</strong>
+        <small>${escapeHtml(match.tactic)} / ${escapeHtml(match.confidence)} confidence</small>
+      </article>
+    `).join("")}
+    ${hiddenCount ? `<p class="empty-note">${hiddenCount} additional MITRE correlation${hiddenCount === 1 ? "" : "s"} available in item details and export.</p>` : ""}
+  `;
 }
 
 function primaryMitreLabel(mitre) {
