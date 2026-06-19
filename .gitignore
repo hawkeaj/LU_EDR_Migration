@@ -3,3 +3,8 @@ node_modules/
 dist/
 .DS_Store
 Thumbs.db
+tmp-cortex-docs/
+tmp-mitre-attack/
+tools/crawl-cortex-docs.mjs
+tools/crawl-mitre-datacomponents.mjs
+tools/summarize-cortex-corpus.mjs

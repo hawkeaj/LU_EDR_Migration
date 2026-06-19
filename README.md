@@ -19,10 +19,10 @@ Then browse to `http://127.0.0.1:4288/`.
 - Maps a broad SentinelOne/S1QL field registry to Cortex-style fields, including event metadata, process, parent process, file, generic object, registry, network, DNS, identity, endpoint, signature, module, and threat metadata fields.
 - Normalizes common S1QL spelling variants such as `ObjectType`, `object_type`, and `Object Type`, then applies contextual mapping for generic object fields based on surrounding `ObjectType` logic.
 - Classifies each item as BIOC Rule, Correlation Rule, XQL Hunt, IOC Rule, or Exception Review.
-- Correlates rule context to MITRE ATT&CK tactics, techniques, and sub-techniques with confidence and rationale.
-- Extracts BIOC/rule-builder notes, manual-review flags, complexity, risk, and confidence.
+- Correlates rule context to MITRE ATT&CK data components, tactics, techniques, and sub-techniques with confidence and rationale.
+- Builds a Cortex migration assessment with construct fit, required telemetry, data availability risks, validation plan, blockers, complexity, risk, and confidence.
 - Imports SentinelOne-style JSON exports or CSV inventory rows.
-- Exports the enriched migration matrix as CSV or JSON, including the draft XQL and field map.
+- Exports the enriched migration matrix as CSV or JSON, including the draft XQL, field map, MITRE data components, and Cortex readiness checks.
 - Stores working data in browser local storage.
 
 For the complete deterministic conversion logic, see [CONVERSION_APPENDIX.md](CONVERSION_APPENDIX.md).

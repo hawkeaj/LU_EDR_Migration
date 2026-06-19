@@ -344,7 +344,7 @@ button:focus-visible,
 
 .preview-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   margin-top: 14px;
 }
@@ -419,6 +419,11 @@ button:focus-visible,
   gap: 10px;
 }
 
+.assessment-list {
+  display: grid;
+  gap: 10px;
+}
+
 .mitre-card {
   border: 1px solid rgba(23, 105, 170, 0.22);
   border-radius: var(--radius);
@@ -426,22 +431,44 @@ button:focus-visible,
   padding: 11px;
 }
 
+.component-card {
+  border-color: rgba(10, 122, 104, 0.24);
+}
+
+.assessment-card {
+  border: 1px solid rgba(86, 93, 116, 0.22);
+  border-radius: var(--radius);
+  background: #ffffff;
+  padding: 11px;
+}
+
 .mitre-card strong,
-.mitre-card a {
+.mitre-card a,
+.assessment-card strong {
   color: var(--accent-dark);
 }
 
-.mitre-card small {
+.mitre-card small,
+.assessment-card small {
   display: block;
   margin-top: 5px;
   color: var(--muted);
   font-weight: 800;
 }
 
-.mitre-card p {
+.mitre-card p,
+.assessment-card p {
   margin: 6px 0 0;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.mitre-section-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .validation-list {
@@ -608,6 +635,16 @@ tbody tr:hover {
   gap: 16px;
 }
 
+.assessment-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.detail-box h4 {
+  margin: 12px 0 7px;
+}
+
 .detail-box.wide {
   grid-column: 1 / -1;
 }
@@ -642,7 +679,8 @@ tbody tr:hover {
   .guidance-list,
   .form-grid,
   .filter-grid,
-  .details-content {
+  .details-content,
+  .assessment-columns {
     grid-template-columns: 1fr;
   }
 

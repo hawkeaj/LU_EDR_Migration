@@ -24,8 +24,10 @@ Each imported or pasted item passes through the same high-level pipeline:
 7. Generate BIOC or rule-builder notes.
 8. Generate field-mapping metadata.
 9. Generate manual-review flags.
-10. Assign risk, confidence, and complexity.
-11. Render and export the enriched migration matrix.
+10. Correlate MITRE ATT&CK data components and techniques.
+11. Build the Cortex migration assessment.
+12. Assign risk, confidence, telemetry fit, and complexity.
+13. Render and export the enriched migration matrix.
 
 ## 2. Supported Source Types
 
@@ -799,6 +801,16 @@ mitreTechniques,
 mitreTactics,
 mitreRationale,
 mitreReferences,
+mitreDataComponents,
+mitreDataComponentDomains,
+mitreDataComponentRationale,
+constructFit,
+telemetryFit,
+requiredTelemetry,
+dataAvailabilityRisks,
+validationPlan,
+cortexCapabilities,
+blockers,
 xql,
 biocConditions,
 fieldMappings,
@@ -830,13 +842,26 @@ translation.issues,
 translation.complexity,
 translation.responseAction,
 mitre.coverage,
+mitre.dataComponentCoverage,
+mitre.dataComponents,
 mitre.matches,
-mitre.notes
+mitre.notes,
+assessment.outcome,
+assessment.constructFit,
+assessment.telemetryFit,
+assessment.requiredTelemetry,
+assessment.dataAvailabilityRisks,
+assessment.validationPlan,
+assessment.cortexCapabilities,
+assessment.blockers
 ```
 
 ## 23. MITRE ATT&CK Correlation
 
-MITRE ATT&CK correlation is deterministic and context-based. The utility does not call MITRE APIs at runtime and does not infer adversary intent beyond observable rule context.
+MITRE ATT&CK correlation is deterministic and context-based. The utility does not call MITRE APIs at runtime and does not infer adversary intent beyond observable rule context. The correlation has two layers:
+
+1. ATT&CK data components, which identify the telemetry properties the rule needs.
+2. ATT&CK tactics, techniques, and sub-techniques, which describe the likely adversary behavior when the rule context is specific enough.
 
 Each mapped result includes:
 
@@ -852,13 +877,28 @@ rationale,
 reference
 ```
 
+Each mapped data component includes:
+
+```text
+id,
+name,
+domain,
+confidence,
+rationale,
+logSourceHints,
+reference
+```
+
 Correlation inputs:
 
 ```text
 rule name,
 original SentinelOne logic,
 normalized STAR logic,
-Cortex target classification
+Cortex target classification,
+source SentinelOne fields,
+mapped Cortex fields,
+BIOC/rule-builder notes
 ```
 
 ### MITRE Coverage Status
@@ -868,6 +908,44 @@ Cortex target classification
 | `Mapped` | One or more deterministic ATT&CK matches were found |
 | `Needs analyst mapping` | No deterministic match was found |
 | `Control / exception review` | Source item is an exclusion and should not be mapped as detection coverage |
+
+### MITRE Data Component Matching
+
+The utility first maps rule context to telemetry components from MITRE ATT&CK Data Sources and Data Components. This prevents the rule from claiming technique coverage unless the supporting telemetry family is also visible.
+
+Representative component matches include:
+
+| Context signal | Data component | Domain | Typical Cortex requirement |
+|---|---|---|---|
+| command-line fields, PowerShell, shell, script host, LOLBins | `DC0064` Command Execution | Endpoint | Endpoint process command-line telemetry in `xdr_data` |
+| process name/path, process start, parent/child process context | `DC0032` Process Creation | Endpoint | Endpoint process creation telemetry |
+| signer, certificate, publisher, integrity, process user | `DC0034` Process Metadata | Endpoint | Process metadata and signature fields |
+| LSASS, process injection, remote thread, memory access | `DC0020` Process Modification | Endpoint | Process access/modification telemetry |
+| module path/name/hash, DLL/image load | `DC0016` Module Load | Endpoint | Module or image-load telemetry |
+| file path/name, dropped payload, startup folder artifact | `DC0039` File Creation | Endpoint | File creation telemetry |
+| file rename, modification, encryption, extension changes | `DC0061` File Modification | Endpoint | File modification telemetry |
+| shadow copy deletion, file delete, shredding | `DC0040` File Deletion | Endpoint | File deletion telemetry |
+| hashes, file size, file type | `DC0059` File Metadata | Endpoint | File metadata and IOC match telemetry |
+| destination IP/port, remote IP/port, outbound connection | `DC0082` Network Connection Creation | Network | Endpoint/network connection telemetry |
+| upload, exfiltration, large outbound transfer, flow volume | `DC0078` Network Traffic Flow | Network | Network flow, byte count, or firewall telemetry |
+| URL, HTTP, user-agent, web content | `DC0085` Network Traffic Content | Network | URL or web traffic telemetry |
+| DNS query/request/response | `DC0103` Active DNS | Network | DNS telemetry |
+| domain/FQDN/external hostname indicators | `DC0096` Passive DNS | Network | DNS, URL, or passive domain observation |
+| logon, login, authentication, failed-then-success patterns | `DC0067`, `DC0002` | Endpoint/Identity | Endpoint logon and identity provider logs |
+| account creation/modification or group membership changes | `DC0014`, `DC0010`, `DC0094` | Identity | Account and group audit logs |
+| registry key/value and Run/RunOnce context | `DC0063`, `DC0056`, `DC0045` | Endpoint | Windows registry telemetry |
+| scheduled task creation or execution | `DC0001` | Endpoint | Scheduled job/task telemetry |
+| service creation or service config changes | `DC0060`, `DC0065` | Endpoint | Service control telemetry |
+| S3, bucket, cloud storage, cloud service context | `DC0025`, `DC0083` | Cloud | Cloud audit logs onboarded to Cortex |
+| Kubernetes pod/container creation | `DC0019`, `DC0072` | Containers | Container or Kubernetes audit telemetry |
+
+Data component confidence is assigned as:
+
+| Confidence | Meaning |
+|---|---|
+| `High` | Both field family and behavior keywords support the component |
+| `Medium` | A field family supports the component |
+| `Low` | Only contextual keywords support the component |
 
 ### MITRE Matching Rules
 
@@ -898,6 +976,7 @@ MITRE confidence is lowered when:
 
 - The conversion contains low-confidence field mappings.
 - The item is a correlation rule involving external data sources such as identity, firewall, cloud, VPN, email, or SIEM.
+- No supporting data component is inferred for an otherwise high-confidence technique.
 - The matched technique is broad by nature, such as web protocols.
 
 ### MITRE Correlation Notes
@@ -906,11 +985,68 @@ The utility adds explanatory notes when:
 
 - No deterministic ATT&CK match is found.
 - The rule is a correlation candidate and may span multiple techniques.
+- No data component can be confidently inferred.
 - Automated response logic exists and should be separated from behavior mapping.
 - The item is IOC-only and may not represent a precise behavior without surrounding context.
 - The item is an exclusion and should be reviewed as a control gap or compensating-control decision.
 
-## 24. Known Limitations
+## 24. Cortex Migration Assessment
+
+After translation and MITRE correlation, the utility builds a migration assessment. This is the main step that makes the utility operational rather than a demo preview.
+
+Assessment output:
+
+```text
+assessment.outcome,
+assessment.constructFit,
+assessment.telemetryFit,
+assessment.requiredTelemetry,
+assessment.dataAvailabilityRisks,
+assessment.validationPlan,
+assessment.cortexCapabilities,
+assessment.blockers
+```
+
+### Construct Fit
+
+| Cortex target | Assessment behavior |
+|---|---|
+| `BIOC Rule` | Treats endpoint-local process, file, registry, and network predicates as BIOC candidates only when the rule does not require joins, sequences, or external datasets |
+| `Correlation Rule` | Requires scheduled XQL/correlation design with lookback, grouping keys, threshold, deduplication, and suppression |
+| `XQL Hunt` | Keeps ambiguous or higher-complexity logic as a hunt until hit quality is measured |
+| `IOC Rule` | Uses Cortex IOC/threat intelligence workflow as the destination; generated XQL is for retrospective validation |
+| `Exception Review` | Treats the item as a control and governance decision, not detection coverage |
+
+### Required Telemetry
+
+Required telemetry is assembled from:
+
+- The Cortex target type.
+- Mapped SentinelOne fields and generated Cortex fields.
+- ATT&CK data component log-source hints.
+- Rule text indicating identity, network, firewall, VPN, cloud, email, container, or endpoint-only dependencies.
+
+### Data Availability Risks
+
+The assessment flags risk when:
+
+- S1QL validation is invalid.
+- Low-confidence field mappings are present.
+- External data sources are required.
+- ATT&CK components include non-endpoint domains.
+- Automated response actions must be recreated separately.
+- Exceptions may reduce monitoring or prevention.
+
+### Validation Plan
+
+The validation plan always includes tenant-schema validation and historical Cortex testing. It adds target-specific work:
+
+- BIOC candidates require event-local predicate validation.
+- Correlation rules require schedule, lookback, grouping, threshold, suppression, and deduplication design.
+- IOC rules require normalized indicator lifecycle management.
+- Exceptions require owner, scope, expiration, pilot rollout, and compensating-control review.
+
+## 25. Known Limitations
 
 The utility does not yet:
 
@@ -924,10 +1060,10 @@ The utility does not yet:
 - Distinguish all file source/target/result semantics.
 - Determine whether a destination tenant has the needed datasets.
 - Deduplicate against existing Cortex rules.
-- Guarantee ATT&CK mapping for every possible detection objective.
+- Guarantee ATT&CK technique or data component mapping for every possible detection objective.
 - Distinguish threat behavior from generic administrative tooling without analyst context.
 
-## 25. Required Human Validation
+## 26. Required Human Validation
 
 Before production enablement, validate:
 
@@ -941,4 +1077,4 @@ Before production enablement, validate:
 8. Suppression/cooldown behavior.
 9. Automated response action safety.
 10. Exception owner, scope, expiration, and compensating controls.
-11. MITRE ATT&CK tactic and technique correctness.
+11. MITRE ATT&CK tactic, technique, and data component correctness.

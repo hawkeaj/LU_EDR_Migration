@@ -564,6 +564,288 @@ const mitreRules = [
   }
 ];
 
+const mitreDataComponentRules = [
+  {
+    id: "DC0064",
+    name: "Command Execution",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0064/",
+    fields: /cmdline|commandline|processcmdline|tgtproccmdline|srcproccmdline|action_process_image_command_line|actor_process_command_line/i,
+    keywords: /\bpowershell\b|\bpwsh\b|\bcmd(?:\.exe)?\b|\b\/c\b|\b-enc\b|\bencodedcommand\b|\bbash\b|\bsh\b|\bwscript\b|\bcscript\b|\brundll32\b|\bregsvr32\b|\bwmic\b|\bmshta\b|\bschtasks\b/i,
+    rationale: "The rule inspects process command execution or command-line content."
+  },
+  {
+    id: "DC0032",
+    name: "Process Creation",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0032/",
+    fields: /eventtype|processname|processpath|tgtprocname|tgtprocpath|srcprocname|action_process_image_name|actor_process_image_name|event_type/i,
+    keywords: /process creation|process start|new process|child process|parent process|spawn/i,
+    rationale: "The rule depends on process start telemetry and process identity."
+  },
+  {
+    id: "DC0034",
+    name: "Process Metadata",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0034/",
+    fields: /processintegritylevel|signer|signature|publisher|certificate|processuser|action_process_signature|action_process_integrity|actor_effective_username/i,
+    keywords: /signed|unsigned|integrity level|publisher|certificate|signer|process user/i,
+    rationale: "The rule uses process properties such as signer, user, integrity, or metadata."
+  },
+  {
+    id: "DC0020",
+    name: "Process Modification",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0020/",
+    fields: /processaccess|targetprocess|remote_thread|injection|memory/i,
+    keywords: /process injection|remote thread|writeprocessmemory|createremotethread|lsass|credential dump|mimikatz|procdump|comsvcs\.dll|minidump/i,
+    rationale: "The rule context suggests process access, memory tampering, injection, or credential dumping behavior."
+  },
+  {
+    id: "DC0016",
+    name: "Module Load",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0016/",
+    fields: /modulepath|modulename|modulesha256|action_module/i,
+    keywords: /module load|image load|dll load|loaded module|\.dll\b/i,
+    rationale: "The rule references loaded modules or DLL/image load telemetry."
+  },
+  {
+    id: "DC0039",
+    name: "File Creation",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0039/",
+    fields: /filename|filepath|filefullpath|objectpath|objectname|action_file_name|action_file_path/i,
+    keywords: /file creation|created file|dropper|dropped|write file|payload written|startup folder/i,
+    rationale: "The rule relies on newly created files, dropped payloads, or file path artifacts."
+  },
+  {
+    id: "DC0061",
+    name: "File Modification",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0061/",
+    fields: /oldfilepath|newfilepath|fileextension|action_file/i,
+    keywords: /file modification|modified file|overwrite|append|encrypt files|ransom|rename|extension/i,
+    rationale: "The rule inspects file changes, rename behavior, or content-altering activity."
+  },
+  {
+    id: "DC0040",
+    name: "File Deletion",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0040/",
+    fields: /deletedfile|filedelete/i,
+    keywords: /file deletion|delete file|deleted files|remove file|shred|shadow.*copy.*delete|vssadmin.*delete/i,
+    rationale: "The rule context references file deletion or recovery disruption."
+  },
+  {
+    id: "DC0059",
+    name: "File Metadata",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0059/",
+    fields: /sha256|sha1|md5|objecthash|filehash|filesize|filetype|action_file_sha|action_file_md5|action_file_size/i,
+    keywords: /hash|sha256|sha1|md5|file size|file type|indicator/i,
+    rationale: "The rule depends on file hashes or file metadata."
+  },
+  {
+    id: "DC0082",
+    name: "Network Connection Creation",
+    domain: "Network",
+    url: "https://attack.mitre.org/datacomponents/DC0082/",
+    fields: /dstip|destinationip|remoteip|dstport|remoteport|action_remote_ip|action_remote_port/i,
+    keywords: /network connection|outbound|connect|remote ip|destination ip|dstip is not empty/i,
+    rationale: "The rule needs connection events with destination address, port, or directionality."
+  },
+  {
+    id: "DC0078",
+    name: "Network Traffic Flow",
+    domain: "Network",
+    url: "https://attack.mitre.org/datacomponents/DC0078/",
+    fields: /bytes|sentbytes|receivedbytes|networkprotocol|protocol/i,
+    keywords: /large outbound|upload|exfil|transfer|netflow|traffic flow|send files|rclone/i,
+    rationale: "The rule context suggests volume, transfer, or flow-level network behavior."
+  },
+  {
+    id: "DC0085",
+    name: "Network Traffic Content",
+    domain: "Network",
+    url: "https://attack.mitre.org/datacomponents/DC0085/",
+    fields: /url|requesturl|targeturl|urlhost|action_url|useragent/i,
+    keywords: /http:\/\/|https:\/\/|user-agent|websocket|post http|payload|content inspection/i,
+    rationale: "The rule references URL, HTTP, user-agent, or network content."
+  },
+  {
+    id: "DC0103",
+    name: "Active DNS",
+    domain: "Network",
+    url: "https://attack.mitre.org/datacomponents/DC0103/",
+    fields: /dnsquery|dnsrequest|dnsresponse|domain|action_external_hostname/i,
+    keywords: /dns query|dns request|dns response|domain lookup|resolve/i,
+    rationale: "The rule relies on DNS request or response data."
+  },
+  {
+    id: "DC0096",
+    name: "Passive DNS",
+    domain: "Network",
+    url: "https://attack.mitre.org/datacomponents/DC0096/",
+    fields: /domain|hostname|action_external_hostname/i,
+    keywords: /domain|fqdn|passive dns|external hostname/i,
+    rationale: "The rule uses observed domain or external hostname context."
+  },
+  {
+    id: "DC0067",
+    name: "Logon Session Creation",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0067/",
+    fields: /loginuser|osusername|accountname|userprincipalname|actor_effective_username/i,
+    keywords: /logon|login|successful logon|failed logon|authentication|same source/i,
+    rationale: "The rule inspects logon or authentication events."
+  },
+  {
+    id: "DC0088",
+    name: "Logon Session Metadata",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0088/",
+    fields: /logontype|sessionid|token|sid/i,
+    keywords: /logon type|session|token|sid|interactive logon|remote logon/i,
+    rationale: "The rule uses session properties or logon metadata."
+  },
+  {
+    id: "DC0002",
+    name: "User Account Authentication",
+    domain: "Identity",
+    url: "https://attack.mitre.org/datacomponents/DC0002/",
+    fields: /userprincipalname|accountname|username|domainuser|actor_effective_username/i,
+    keywords: /authentication|failed admin logons|successful logon|mfa|okta|entra|azure ad|sso|identity/i,
+    rationale: "The rule requires identity-provider or account authentication context."
+  },
+  {
+    id: "DC0014",
+    name: "User Account Creation",
+    domain: "Identity",
+    url: "https://attack.mitre.org/datacomponents/DC0014/",
+    fields: /accountcreated|newaccount/i,
+    keywords: /user account creation|new user|account created|add user/i,
+    rationale: "The rule detects account creation."
+  },
+  {
+    id: "DC0010",
+    name: "User Account Modification",
+    domain: "Identity",
+    url: "https://attack.mitre.org/datacomponents/DC0010/",
+    fields: /accountmodified|userprincipalname|accountname/i,
+    keywords: /account modified|password reset|privilege changed|user modified|disable account|enable account/i,
+    rationale: "The rule detects user account changes."
+  },
+  {
+    id: "DC0094",
+    name: "Group Modification",
+    domain: "Identity",
+    url: "https://attack.mitre.org/datacomponents/DC0094/",
+    fields: /groupname|groupid|member/i,
+    keywords: /group modification|added to group|domain admins|admin group|member added|group membership/i,
+    rationale: "The rule inspects group membership or privilege group changes."
+  },
+  {
+    id: "DC0063",
+    name: "Windows Registry Key Modification",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0063/",
+    fields: /registrykey|registrykeypath|registrypath|registryvaluename|registrydata|action_registry/i,
+    keywords: /registry|runonce|currentversion\\run|registry key|registry value|autorun/i,
+    rationale: "The rule depends on registry key or value modification telemetry."
+  },
+  {
+    id: "DC0056",
+    name: "Windows Registry Key Creation",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0056/",
+    fields: /registrykey|registrykeypath|registrypath|action_registry/i,
+    keywords: /registry key creation|created registry|new registry key|run key/i,
+    rationale: "The rule context references newly created registry keys."
+  },
+  {
+    id: "DC0045",
+    name: "Windows Registry Key Deletion",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0045/",
+    fields: /registrykey|registrykeypath|registrypath|action_registry/i,
+    keywords: /registry key deletion|delete registry|deleted registry/i,
+    rationale: "The rule context references deleted registry keys or values."
+  },
+  {
+    id: "DC0001",
+    name: "Scheduled Job Creation",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0001/",
+    fields: /scheduledtask|taskname|taskpath/i,
+    keywords: /schtasks|scheduled task|task scheduler|cron job|launchd/i,
+    rationale: "The rule tracks new scheduled jobs or task creation."
+  },
+  {
+    id: "DC0060",
+    name: "Service Creation",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0060/",
+    fields: /servicename|servicepath|serviceaccount/i,
+    keywords: /service creation|new service|sc\.exe create|create service|systemctl enable/i,
+    rationale: "The rule detects new services or daemon registration."
+  },
+  {
+    id: "DC0065",
+    name: "Service Modification",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0065/",
+    fields: /servicename|servicepath|serviceaccount/i,
+    keywords: /service modification|service changed|sc\.exe config|service binary/i,
+    rationale: "The rule detects service configuration changes."
+  },
+  {
+    id: "DC0018",
+    name: "Host Status",
+    domain: "Endpoint",
+    url: "https://attack.mitre.org/datacomponents/DC0018/",
+    fields: /agentstatus|endpointstatus|agent_version|agent_os_type/i,
+    keywords: /sensor tamper|agent disabled|security service stopped|edr stopped|host status|disable network/i,
+    rationale: "The rule depends on endpoint or security-agent status."
+  },
+  {
+    id: "DC0025",
+    name: "Cloud Storage Access",
+    domain: "Cloud",
+    url: "https://attack.mitre.org/datacomponents/DC0025/",
+    fields: /cloud|bucket|storage|s3|blob/i,
+    keywords: /s3:\/\/|aws s3|bucket access|cloud storage|dropbox|onedrive|google drive|box\.com|mega\.nz/i,
+    rationale: "The rule references access to cloud storage services."
+  },
+  {
+    id: "DC0083",
+    name: "Cloud Service Enumeration",
+    domain: "Cloud",
+    url: "https://attack.mitre.org/datacomponents/DC0083/",
+    fields: /cloud|aws|azure|gcp/i,
+    keywords: /aws|azure|gcp|cloud service|enumerate cloud|list buckets|describe instances/i,
+    rationale: "The rule depends on cloud-service activity or enumeration telemetry."
+  },
+  {
+    id: "DC0019",
+    name: "Pod Creation",
+    domain: "Containers",
+    url: "https://attack.mitre.org/datacomponents/DC0019/",
+    fields: /pod|kubernetes|k8s|namespace/i,
+    keywords: /pod creation|kubectl run|kubernetes pod|k8s pod/i,
+    rationale: "The rule references Kubernetes pod creation."
+  },
+  {
+    id: "DC0072",
+    name: "Container Creation",
+    domain: "Containers",
+    url: "https://attack.mitre.org/datacomponents/DC0072/",
+    fields: /container|image|docker/i,
+    keywords: /docker run|container creation|new container|container image/i,
+    rationale: "The rule references container creation or image execution."
+  }
+];
+
 const s1qlOperatorSupport = {
   "1.0": new Set(["=", "!=", ">", "<", ">=", "<=", "contains", "not contains", "in", "not in", "matches", "regexp", "is empty", "is not empty"]),
   "2.0": new Set(["=", "!=", ">", "<", ">=", "<=", "contains", "not contains", "in", "not in", "matches", "regexp", "starts with", "ends with", "is empty", "is not empty"])
@@ -883,6 +1165,7 @@ const biocPreview = document.querySelector("#bioc-preview");
 const mappingPreview = document.querySelector("#mapping-preview");
 const issuesPreview = document.querySelector("#issues-preview");
 const mitrePreview = document.querySelector("#mitre-preview");
+const assessmentPreview = document.querySelector("#assessment-preview");
 const s1qlPreview = document.querySelector("#s1ql-preview");
 const copyXqlButton = document.querySelector("#copy-xql");
 const exportTranslationButton = document.querySelector("#export-translation");
@@ -974,6 +1257,7 @@ function analyzeItem(item) {
   const translation = translateToCortex(item, { target, confidence, risk, responseAction }, extracted, s1ql);
   const downgradedConfidence = lowerConfidence(confidence, translation);
   const mitre = correlateMitre(item, translation, { target, risk });
+  const assessment = buildMigrationAssessment(item, { target, confidence: downgradedConfidence, risk, responseAction }, translation, mitre, s1ql);
 
   return {
     ...item,
@@ -984,7 +1268,8 @@ function analyzeItem(item) {
     nextChecks,
     s1ql,
     translation,
-    mitre
+    mitre,
+    assessment
   };
 }
 
@@ -1292,9 +1577,13 @@ function stripS1qlStrings(query) {
 }
 
 function correlateMitre(item, translation, classification) {
+  const dataComponents = inferMitreDataComponents(item, translation, classification);
+
   if (item.type === "exclusion") {
     return {
       coverage: "Control / exception review",
+      dataComponentCoverage: dataComponents.length ? "Mapped" : "Not applicable",
+      dataComponents,
       matches: [],
       notes: [
         "Exclusions are mapped to compensating-control review instead of ATT&CK technique coverage.",
@@ -1319,25 +1608,28 @@ function correlateMitre(item, translation, classification) {
       technique: rule.technique,
       subtechnique: rule.subtechnique,
       displayName: rule.subtechnique ? `${rule.technique}: ${rule.subtechnique}` : rule.technique,
-      confidence: adjustMitreConfidence(rule, text, translation, classification),
+      confidence: adjustMitreConfidence(rule, text, translation, classification, dataComponents),
       rationale: rule.rationale,
       reference: rule.reference
     }));
 
   const deduped = dedupeMitreMatches(matched);
-  const notes = buildMitreNotes(item, deduped, translation, classification);
+  const notes = buildMitreNotes(item, deduped, translation, classification, dataComponents);
 
   return {
     coverage: deduped.length ? "Mapped" : "Needs analyst mapping",
+    dataComponentCoverage: dataComponents.length ? "Mapped" : "Needs telemetry mapping",
+    dataComponents,
     matches: deduped,
     notes
   };
 }
 
-function adjustMitreConfidence(rule, text, translation, classification) {
+function adjustMitreConfidence(rule, text, translation, classification, dataComponents) {
   if (rule.confidence === "Low") return "Low";
   if (translation.fieldMap.some((field) => field.confidence === "Low")) return rule.confidence === "High" ? "Medium" : rule.confidence;
   if (classification.target === "Correlation Rule" && /identity|firewall|cloud|vpn|email|siem/.test(text)) return rule.confidence === "High" ? "Medium" : rule.confidence;
+  if (!dataComponents.length && rule.confidence === "High") return "Medium";
   return rule.confidence;
 }
 
@@ -1361,11 +1653,15 @@ function dedupeMitreMatches(matches) {
   });
 }
 
-function buildMitreNotes(item, matches, translation, classification) {
+function buildMitreNotes(item, matches, translation, classification, dataComponents = []) {
   const notes = [];
 
   if (!matches.length) {
     notes.push("No deterministic ATT&CK match was found. Add analyst mapping based on threat behavior, not only field names.");
+  }
+
+  if (!dataComponents.length && item.type !== "ioc") {
+    notes.push("No ATT&CK data component was confidently inferred. Confirm the log source and telemetry field family before assigning technique coverage.");
   }
 
   if (classification.target === "Correlation Rule") {
@@ -1381,6 +1677,252 @@ function buildMitreNotes(item, matches, translation, classification) {
   }
 
   return notes;
+}
+
+function inferMitreDataComponents(item, translation, classification) {
+  const sourceFields = (translation.fieldMap || []).map((field) => field.source).join(" ");
+  const cortexFields = (translation.fieldMap || []).map((field) => field.cortex).join(" ");
+  const conditions = (translation.biocConditions || []).join(" ");
+  const text = [
+    item.name,
+    item.logic,
+    translation.normalizedStar,
+    classification.target,
+    sourceFields,
+    cortexFields,
+    conditions
+  ].join(" ");
+
+  const matches = [];
+
+  mitreDataComponentRules.forEach((component) => {
+    const fieldHit = component.fields?.test(text);
+    const keywordHit = component.keywords?.test(text);
+    if (!fieldHit && !keywordHit) return;
+
+    matches.push({
+      id: component.id,
+      name: component.name,
+      domain: component.domain,
+      confidence: fieldHit && keywordHit ? "High" : fieldHit ? "Medium" : "Low",
+      rationale: component.rationale,
+      logSourceHints: buildLogSourceHints(component, translation, classification),
+      reference: component.url
+    });
+  });
+
+  if (item.type === "ioc") {
+    const indicators = extractIndicators(item.logic);
+    if (indicators.sha256.length || indicators.sha1.length || indicators.md5.length) {
+      matches.push(componentFallback("DC0059", "File Metadata", "Endpoint", "High", "IOC contains file hashes that should be validated against file metadata or IOC match telemetry."));
+    }
+    if (indicators.ip.length) {
+      matches.push(componentFallback("DC0082", "Network Connection Creation", "Network", "Medium", "IOC contains IP indicators that need network connection telemetry or IOC matching."));
+    }
+    if (indicators.domain.length) {
+      matches.push(componentFallback("DC0096", "Passive DNS", "Network", "Medium", "IOC contains domain indicators that need DNS, URL, or external hostname telemetry."));
+    }
+  }
+
+  return dedupeDataComponents(matches);
+}
+
+function buildLogSourceHints(component, translation, classification) {
+  const hints = [];
+  const cortexFields = (translation.fieldMap || [])
+    .filter((field) => component.fields?.test(`${field.source} ${field.cortex}`))
+    .map((field) => field.cortex);
+
+  if (component.domain === "Endpoint") hints.push("Cortex XDR endpoint xdr_data events");
+  if (component.domain === "Network") hints.push("Cortex network, DNS, URL, or firewall/network telemetry");
+  if (component.domain === "Identity") hints.push("Identity provider, authentication, or account activity logs onboarded to Cortex");
+  if (component.domain === "Cloud") hints.push("Cloud audit logs or cloud service activity onboarded to Cortex");
+  if (component.domain === "Containers") hints.push("Kubernetes/container audit telemetry onboarded to Cortex");
+  if (classification.target === "Correlation Rule") hints.push("Scheduled XQL/correlation context with a defined lookback window");
+  if (cortexFields.length) hints.push(`Mapped Cortex fields: ${unique(cortexFields).slice(0, 5).join(", ")}`);
+
+  return unique(hints);
+}
+
+function componentFallback(id, name, domain, confidence, rationale) {
+  const base = mitreDataComponentRules.find((component) => component.id === id);
+  return {
+    id,
+    name,
+    domain,
+    confidence,
+    rationale,
+    logSourceHints: base ? buildLogSourceHints(base, { fieldMap: [] }, { target: "IOC Rule" }) : [],
+    reference: base?.url || `https://attack.mitre.org/datacomponents/${id}/`
+  };
+}
+
+function dedupeDataComponents(components) {
+  const rank = { High: 3, Medium: 2, Low: 1 };
+  const byId = new Map();
+
+  components.forEach((component) => {
+    const existing = byId.get(component.id);
+    if (!existing || rank[component.confidence] > rank[existing.confidence]) {
+      byId.set(component.id, component);
+    }
+  });
+
+  return [...byId.values()].sort((left, right) => {
+    if (left.domain !== right.domain) return left.domain.localeCompare(right.domain);
+    if (rank[right.confidence] !== rank[left.confidence]) return rank[right.confidence] - rank[left.confidence];
+    return left.id.localeCompare(right.id);
+  });
+}
+
+function buildMigrationAssessment(item, classification, translation, mitre, s1ql) {
+  const requiredTelemetry = inferRequiredTelemetry(item, classification, translation, mitre);
+  const dataAvailabilityRisks = inferDataAvailabilityRisks(item, classification, translation, mitre, s1ql);
+  const validationPlan = buildValidationPlan(item, classification, translation, mitre, s1ql);
+  const blockers = [
+    ...translation.issues.filter((issue) => issue.level === "High").map((issue) => issue.text),
+    ...(s1ql.status === "Invalid" ? ["Source S1QL is invalid; fix syntax before promoting the generated XQL or BIOC conditions."] : [])
+  ];
+  const constructFit = inferConstructFit(classification.target, translation, mitre);
+
+  return {
+    outcome: blockers.length ? "Needs remediation before pilot" : classification.confidence === "Low" ? "Needs analyst validation" : "Ready for controlled validation",
+    constructFit,
+    telemetryFit: inferTelemetryFit(requiredTelemetry, dataAvailabilityRisks, translation, mitre),
+    requiredTelemetry,
+    dataAvailabilityRisks,
+    validationPlan,
+    cortexCapabilities: inferCortexCapabilities(classification.target),
+    blockers
+  };
+}
+
+function inferRequiredTelemetry(item, classification, translation, mitre) {
+  const required = new Set();
+  const text = `${item.name} ${item.logic} ${translation.normalizedStar}`.toLowerCase();
+
+  if (classification.target === "BIOC Rule" || classification.target === "XQL Hunt") {
+    required.add("Cortex XDR endpoint xdr_data for process, file, registry, and network activity used by the rule.");
+  }
+  if (classification.target === "IOC Rule") {
+    required.add("Cortex IOC or threat intelligence workflow with indicator type, source, confidence, and expiration.");
+  }
+  if (classification.target === "Correlation Rule") {
+    required.add("Scheduled XQL or correlation rule with an explicit lookback window, threshold, grouping keys, and suppression policy.");
+  }
+  if (classification.target === "Exception Review") {
+    required.add("Cortex exception policy inventory, endpoint scope, owner approval, expiration, and compensating controls.");
+  }
+
+  (mitre.dataComponents || []).forEach((component) => {
+    component.logSourceHints.forEach((hint) => required.add(hint));
+  });
+
+  if (/identity|okta|entra|azure ad|sso|logon|authentication|account|group/.test(text)) {
+    required.add("Identity/authentication telemetry onboarded to Cortex and normalized to user/account fields.");
+  }
+  if (/firewall|ngfw|vpn|dns|url|http|network|dstip|remote ip|domain/.test(text)) {
+    required.add("Network, DNS, URL, VPN, or firewall telemetry available in Cortex for network-side enrichment.");
+  }
+  if (/aws|azure|gcp|cloud|s3|bucket|kubernetes|container|docker|kubectl/.test(text)) {
+    required.add("Cloud or container audit logs onboarded to Cortex before using the rule as production coverage.");
+  }
+
+  if (translation.fieldMap.length) {
+    required.add(`Validated Cortex fields: ${unique(translation.fieldMap.map((field) => field.cortex)).slice(0, 12).join(", ")}.`);
+  }
+
+  return [...required];
+}
+
+function inferDataAvailabilityRisks(item, classification, translation, mitre, s1ql) {
+  const risks = [];
+  const text = `${item.name} ${item.logic} ${translation.normalizedStar}`.toLowerCase();
+
+  if (s1ql.status === "Invalid") {
+    risks.push("S1QL syntax errors mean the translated XQL may not preserve the source rule intent.");
+  }
+  if (translation.fieldMap.some((field) => field.confidence === "Low")) {
+    risks.push("One or more SentinelOne fields do not have a direct Cortex xdr_data equivalent and need tenant-schema validation.");
+  }
+  if (classification.target === "Correlation Rule") {
+    risks.push("Correlation rules need retention, schedule, and grouping validation; endpoint-only BIOC logic may not be sufficient.");
+  }
+  if (/(identity|okta|entra|azure ad|sso|firewall|ngfw|vpn|aws|gcp|cloud|email|siem)/.test(text)) {
+    risks.push("This logic depends on non-endpoint data that may require Cortex data onboarding or a different dataset than xdr_data.");
+  }
+  if ((mitre.dataComponents || []).some((component) => ["Cloud", "Containers", "Identity", "Network"].includes(component.domain))) {
+    risks.push("ATT&CK data components include sources beyond endpoint activity; confirm those sources are licensed and retained in Cortex.");
+  }
+  if (item.type === "exclusion") {
+    risks.push("Exclusions can reduce monitoring or prevention; migrate only after owner, scope, expiration, and compensating-control review.");
+  }
+  if (translation.responseAction) {
+    risks.push("SentinelOne response actions do not automatically migrate; rebuild actions in Cortex alert actions/playbooks after staged testing.");
+  }
+
+  return risks.length ? unique(risks) : ["No major data availability risk was inferred, but tenant schema and retention still require validation."];
+}
+
+function buildValidationPlan(item, classification, translation, mitre, s1ql) {
+  const plan = [];
+
+  if (s1ql.status === "Invalid") {
+    plan.push("Fix S1QL syntax errors in the source rule, then regenerate XQL.");
+  } else {
+    plan.push("Run the generated XQL against 30-90 days of Cortex telemetry and compare sample hits to the SentinelOne rule intent.");
+  }
+
+  plan.push("Confirm each mapped Cortex field exists in the destination tenant and returns values for the targeted endpoint groups.");
+
+  if (classification.target === "BIOC Rule") {
+    plan.push("Convert only endpoint-local process, file, registry, and network predicates into BIOC conditions; keep sequences and joins as XQL/correlation.");
+  } else if (classification.target === "Correlation Rule") {
+    plan.push("Define schedule, lookback, grouping keys, threshold, deduplication, and suppression before enabling alerting.");
+  } else if (classification.target === "IOC Rule") {
+    plan.push("Normalize indicators by type, deduplicate, assign source/confidence/expiration, and validate IOC hit telemetry.");
+  } else if (classification.target === "Exception Review") {
+    plan.push("Pilot the exception on a narrow endpoint scope and verify the excluded software still leaves adequate detection coverage.");
+  }
+
+  if ((mitre.dataComponents || []).length) {
+    plan.push(`Validate ATT&CK data components: ${mitre.dataComponents.slice(0, 5).map((component) => `${component.id} ${component.name}`).join("; ")}.`);
+  }
+
+  if (translation.responseAction) {
+    plan.push("Recreate automated response separately from detection logic and test alert-only before enforcement.");
+  }
+
+  plan.push("Record expected alert volume, false-positive criteria, owner, rollback plan, and retirement criteria before production cutover.");
+  return unique(plan);
+}
+
+function inferConstructFit(target, translation, mitre) {
+  if (target === "Exception Review") return "Exception/control review, not a detection translation.";
+  if (target === "IOC Rule") return "IOC workflow for indicators; XQL draft is for validation and retrospective hunting.";
+  if (target === "Correlation Rule") return "Scheduled XQL/correlation rule; avoid forcing multi-event logic into a BIOC.";
+  const domains = new Set((mitre.dataComponents || []).map((component) => component.domain));
+  if (target === "BIOC Rule" && [...domains].every((domain) => domain === "Endpoint" || domain === "Network")) {
+    return "BIOC candidate if all predicates are event-local and supported by Cortex BIOC fields.";
+  }
+  if (translation.complexity === "High") return "XQL hunt first; promote only after field and volume validation.";
+  return "XQL hunt or BIOC candidate depending on event locality and pilot hit quality.";
+}
+
+function inferTelemetryFit(requiredTelemetry, dataAvailabilityRisks, translation, mitre) {
+  if (translation.issues.some((issue) => issue.level === "High")) return "Low";
+  if (dataAvailabilityRisks.some((risk) => /non-endpoint|beyond endpoint|retention|schema/.test(risk))) return "Medium";
+  if (!(mitre.dataComponents || []).length && translation.fieldMap.length < 2) return "Low";
+  if (requiredTelemetry.length > 4) return "Medium";
+  return "High";
+}
+
+function inferCortexCapabilities(target) {
+  if (target === "BIOC Rule") return ["BIOC rule builder", "xdr_data endpoint telemetry", "Alert routing", "Optional response actions after pilot"];
+  if (target === "Correlation Rule") return ["XQL search", "Scheduled/correlation rule", "Multiple datasets when onboarded", "Suppression and grouping"];
+  if (target === "IOC Rule") return ["IOC/threat intelligence import", "Indicator lifecycle management", "Retrospective XQL validation"];
+  if (target === "Exception Review") return ["Alert/prevention exception policy", "Endpoint group scoping", "Owner and expiration governance"];
+  return ["XQL search", "Hunt-to-detection promotion workflow", "Field validation in Cortex schema"];
 }
 
 function analyzedItems() {
@@ -2306,7 +2848,7 @@ function renderSummary() {
     total: data.length,
     star: data.filter((item) => item.type === "star").length,
     translated: data.filter((item) => item.translation.xql && item.type !== "exclusion").length,
-    mitreMapped: data.filter((item) => item.mitre.matches.length).length,
+    mitreMapped: data.filter((item) => item.mitre.matches.length || item.mitre.dataComponents.length).length,
     highRisk: data.filter((item) => item.risk === "High").length
   };
 
@@ -2314,7 +2856,7 @@ function renderSummary() {
     <article class="metric-card"><small>Total inventory</small><span>${counts.total}</span><p>Rules, hunts, IOCs, and exclusions staged for cutover.</p></article>
     <article class="metric-card"><small>STAR rules</small><span>${counts.star}</span><p>Primary SentinelOne detections ready for Cortex translation.</p></article>
     <article class="metric-card"><small>Draft outputs</small><span>${counts.translated}</span><p>Items with generated XQL, IOC, or BIOC migration artifacts.</p></article>
-    <article class="metric-card"><small>MITRE mapped</small><span>${counts.mitreMapped}</span><p>Items with deterministic ATT&CK tactic and technique correlation.</p></article>
+    <article class="metric-card"><small>MITRE mapped</small><span>${counts.mitreMapped}</span><p>Items with ATT&CK technique or data component correlation.</p></article>
     <article class="metric-card"><small>High risk</small><span>${counts.highRisk}</span><p>Prioritize for owner review and staged pilot validation.</p></article>
   `;
 }
@@ -2348,6 +2890,7 @@ function renderTranslationPreview() {
     : `<li>No blocking translation gaps detected for this draft.</li>`;
 
   mitrePreview.innerHTML = mitreHtml(draft.mitre);
+  assessmentPreview.innerHTML = assessmentHtml(draft.assessment);
 }
 
 function renderMatrix() {
@@ -2356,7 +2899,7 @@ function renderMatrix() {
     const sourceMatch = filters.source.value === "all" || item.type === filters.source.value;
     const targetMatch = filters.target.value === "all" || item.target === filters.target.value;
     const statusMatch = filters.status.value === "all" || item.status === filters.status.value;
-    const searchMatch = !search || `${item.name} ${item.logic} ${item.scope} ${item.owner} ${item.translation.xql}`.toLowerCase().includes(search);
+    const searchMatch = !search || `${item.name} ${item.logic} ${item.scope} ${item.owner} ${item.translation.xql} ${item.assessment.requiredTelemetry.join(" ")}`.toLowerCase().includes(search);
     return sourceMatch && targetMatch && statusMatch && searchMatch;
   });
 
@@ -2364,7 +2907,7 @@ function renderMatrix() {
     <tr>
       <td><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)} / ${escapeHtml(item.owner)}</small></td>
       <td><span class="pill">${sourceLabel(item.type)}</span><small>${escapeHtml(item.severity)}</small></td>
-      <td>${escapeHtml(item.target)}<small>${escapeHtml(item.translation.complexity)} complexity</small><small>S1QL: ${escapeHtml(item.s1ql.status)}</small><small>${escapeHtml(primaryMitreLabel(item.mitre))}</small></td>
+      <td>${escapeHtml(item.target)}<small>${escapeHtml(item.translation.complexity)} complexity</small><small>S1QL: ${escapeHtml(item.s1ql.status)}</small><small>${escapeHtml(primaryMitreLabel(item.mitre))}</small><small>${escapeHtml(primaryDataComponentLabel(item.mitre))}</small></td>
       <td><span class="${riskClass(item.risk)}">${escapeHtml(item.risk)}</span></td>
       <td><span class="${confidenceClass(item.confidence)}">${escapeHtml(item.confidence)}</span></td>
       <td>
@@ -2405,6 +2948,25 @@ function showDetails(id) {
     <article class="detail-box">
       <h3>Validation checklist</h3>
       <ul>${item.nextChecks.map((check) => `<li>${escapeHtml(check)}</li>`).join("")}</ul>
+    </article>
+    <article class="detail-box wide">
+      <h3>Cortex Migration Assessment</h3>
+      <p><strong>Outcome:</strong> ${escapeHtml(item.assessment.outcome)}</p>
+      <p><strong>Construct fit:</strong> ${escapeHtml(item.assessment.constructFit)}</p>
+      <p><strong>Telemetry fit:</strong> ${escapeHtml(item.assessment.telemetryFit)}</p>
+      <div class="assessment-columns">
+        <div>
+          <h4>Required telemetry</h4>
+          <ul>${item.assessment.requiredTelemetry.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")}</ul>
+        </div>
+        <div>
+          <h4>Capability and data risks</h4>
+          <ul>${item.assessment.dataAvailabilityRisks.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")}</ul>
+        </div>
+      </div>
+      <h4>Validation plan</h4>
+      <ul>${item.assessment.validationPlan.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")}</ul>
+      ${item.assessment.blockers.length ? `<h4>Blockers</h4><ul>${item.assessment.blockers.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")}</ul>` : ""}
     </article>
     <article class="detail-box wide">
       <h3>Draft Cortex XQL</h3>
@@ -2640,6 +3202,16 @@ function exportCsv() {
     "mitreTactics",
     "mitreRationale",
     "mitreReferences",
+    "mitreDataComponents",
+    "mitreDataComponentDomains",
+    "mitreDataComponentRationale",
+    "constructFit",
+    "telemetryFit",
+    "requiredTelemetry",
+    "dataAvailabilityRisks",
+    "validationPlan",
+    "cortexCapabilities",
+    "blockers",
     "xql",
     "biocConditions",
     "fieldMappings",
@@ -2667,6 +3239,16 @@ function exportCsv() {
     unique(item.mitre.matches.flatMap((match) => match.tactics)).join(" | "),
     item.mitre.matches.map((match) => match.rationale).join(" | "),
     item.mitre.matches.map((match) => match.reference).join(" | "),
+    item.mitre.dataComponents.map((component) => `${component.id} ${component.name} (${component.confidence})`).join(" | "),
+    unique(item.mitre.dataComponents.map((component) => component.domain)).join(" | "),
+    item.mitre.dataComponents.map((component) => component.rationale).join(" | "),
+    item.assessment.constructFit,
+    item.assessment.telemetryFit,
+    item.assessment.requiredTelemetry.join(" | "),
+    item.assessment.dataAvailabilityRisks.join(" | "),
+    item.assessment.validationPlan.join(" | "),
+    item.assessment.cortexCapabilities.join(" | "),
+    item.assessment.blockers.join(" | "),
     item.translation.xql,
     item.translation.biocConditions.join(" | "),
     item.translation.fieldMap.map((field) => `${field.source}->${field.cortex} (${field.confidence})`).join(" | "),
@@ -2768,25 +3350,70 @@ function s1qlHtml(s1ql) {
 }
 
 function mitreHtml(mitre) {
-  if (!mitre.matches.length) {
+  if (!mitre.matches.length && !mitre.dataComponents.length) {
     return `
       <p class="empty-note">${escapeHtml(mitre.notes[0] || "No ATT&CK correlation detected.")}</p>
     `;
   }
 
-  return mitre.matches.map((match) => `
-    <article class="mitre-card">
-      <strong><a href="${escapeHtml(match.reference)}" target="_blank" rel="noreferrer">${escapeHtml(match.id)}</a> ${escapeHtml(match.displayName)}</strong>
-      <small>${escapeHtml(match.tactic)} / ${escapeHtml(match.confidence)} confidence</small>
-      <p>${escapeHtml(match.rationale)}</p>
-    </article>
-  `).join("");
+  const componentHtml = mitre.dataComponents.length
+    ? `
+      <div class="mitre-section-label">Data components</div>
+      ${mitre.dataComponents.map((component) => `
+        <article class="mitre-card component-card">
+          <strong><a href="${escapeHtml(component.reference)}" target="_blank" rel="noreferrer">${escapeHtml(component.id)}</a> ${escapeHtml(component.name)}</strong>
+          <small>${escapeHtml(component.domain)} / ${escapeHtml(component.confidence)} confidence</small>
+          <p>${escapeHtml(component.rationale)}</p>
+        </article>
+      `).join("")}
+    `
+    : "";
+
+  const techniqueHtml = mitre.matches.length
+    ? `
+      <div class="mitre-section-label">Techniques</div>
+      ${mitre.matches.map((match) => `
+        <article class="mitre-card">
+          <strong><a href="${escapeHtml(match.reference)}" target="_blank" rel="noreferrer">${escapeHtml(match.id)}</a> ${escapeHtml(match.displayName)}</strong>
+          <small>${escapeHtml(match.tactic)} / ${escapeHtml(match.confidence)} confidence</small>
+          <p>${escapeHtml(match.rationale)}</p>
+        </article>
+      `).join("")}
+    `
+    : `<p class="empty-note">${escapeHtml(mitre.notes[0] || "No deterministic ATT&CK technique match detected.")}</p>`;
+
+  return componentHtml + techniqueHtml;
 }
 
 function primaryMitreLabel(mitre) {
   const primary = mitre.matches[0];
   if (!primary) return "MITRE: needs analyst mapping";
   return `MITRE: ${primary.id} ${primary.subtechnique || primary.technique}`;
+}
+
+function primaryDataComponentLabel(mitre) {
+  const primary = mitre.dataComponents?.[0];
+  if (!primary) return "Data component: needs telemetry mapping";
+  return `Data component: ${primary.id} ${primary.name}`;
+}
+
+function assessmentHtml(assessment) {
+  return `
+    <article class="assessment-card">
+      <strong>${escapeHtml(assessment.outcome)}</strong>
+      <small>${escapeHtml(assessment.telemetryFit)} telemetry fit</small>
+      <p>${escapeHtml(assessment.constructFit)}</p>
+    </article>
+    <article class="assessment-card">
+      <strong>Required telemetry</strong>
+      <small>${escapeHtml(assessment.requiredTelemetry.length)} requirement${assessment.requiredTelemetry.length === 1 ? "" : "s"}</small>
+      <p>${escapeHtml(assessment.requiredTelemetry[0] || "No telemetry requirement inferred yet.")}</p>
+    </article>
+    <article class="assessment-card">
+      <strong>Next validation</strong>
+      <p>${escapeHtml(assessment.validationPlan[0] || "Run Cortex validation before production use.")}</p>
+    </article>
+  `;
 }
 
 function escapeHtml(value) {
